@@ -2,16 +2,23 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Reflected;
 import com.asledgehammer.rosetta.RosettaEntity;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
-public abstract class JavaExecutable extends RosettaEntity implements DirtySupported, NamedEntity {
+/**
+ * @param <E> The type of {@link Executable} ({@link Method} or {@link Constructor})
+ */
+public abstract class JavaExecutable<E extends Executable> extends RosettaEntity
+    implements DirtySupported, NamedEntity, Reflected<E> {
 
   /** Used to validate method names passed from serialized files. */
   private static final Pattern REGEX_EXECUTABLE_NAME = Pattern.compile("^[a-z][a-zA-Z0-9]*$");
@@ -20,6 +27,7 @@ public abstract class JavaExecutable extends RosettaEntity implements DirtySuppo
   private static final List<JavaParameter> DEFAULT_EMPTY_LIST = List.of();
 
   private final List<JavaParameter> parameters = new ArrayList<>();
+
   private final String signature;
   private final String name;
 
@@ -32,27 +40,18 @@ public abstract class JavaExecutable extends RosettaEntity implements DirtySuppo
    */
   private List<JavaParameter> parametersReadOnly = DEFAULT_EMPTY_LIST;
 
+  private final E reflectedObject;
+
   /**
    * New Constructor for Method and Constructors.
    *
    * <p>NOTE: They must populate their properties in the sub-constructor calling this one.
    *
-   * @param name The name of the executable.
+   * @param executable The executable reflection object.
    */
-  protected JavaExecutable(@NotNull String name) {
-    this.name = name;
-    this.signature = createSignature(this);
-  }
-
-  /**
-   * Load constructor for serialized data from files.
-   *
-   * @param name The name of the executable.
-   * @param raw The data to load from a file.
-   */
-  public JavaExecutable(@NotNull String name, @NotNull Map<String, Object> raw) {
-    super(raw);
-    this.name = name;
+  protected JavaExecutable(@NotNull E executable) {
+    this.reflectedObject = executable;
+    this.name = executable.getName();
     this.signature = createSignature(this);
   }
 
@@ -65,7 +64,11 @@ public abstract class JavaExecutable extends RosettaEntity implements DirtySuppo
       // If any parameter is dirty, also compile.
       for (JavaParameter parameter : parameters) {
         if (parameter.isDirty()) {
-          parameter.compile();
+
+          // Fail compilation if the parameter fails.
+          if (!parameter.compile()) {
+            return false;
+          }
         }
       }
 
@@ -131,9 +134,16 @@ public abstract class JavaExecutable extends RosettaEntity implements DirtySuppo
     return this.signature;
   }
 
+  @NotNull
   @Override
   public String getName() {
     return this.name;
+  }
+
+  @NotNull
+  @Override
+  public E getReflectedObject() {
+    return this.reflectedObject;
   }
 
   /**

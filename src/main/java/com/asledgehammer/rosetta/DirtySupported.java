@@ -6,16 +6,23 @@ package com.asledgehammer.rosetta;
  */
 public interface DirtySupported {
 
-  /** Compute and update the object. (If dirty) */
-  default void compile() {
-    if (!isDirty()) return;
+  /**
+   * Compute and update the object. (If dirty)
+   *
+   * @return True if the object is considered not-dirty. False if the compilation fails or is not
+   *     considered compiled and is dirty.
+   */
+  default boolean compile() {
+    if (!isDirty()) return true;
     try {
       if (onCompile()) {
         setDirty(false);
+        return true;
       }
     } catch (Exception e) {
       throw new RuntimeException("Failed to compile dirty " + getClass().getSimpleName() + ".", e);
     }
+    return false;
   }
 
   /**

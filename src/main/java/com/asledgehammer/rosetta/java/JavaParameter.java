@@ -1,6 +1,8 @@
 package com.asledgehammer.rosetta.java;
 
+import com.asledgehammer.reference.TypeReference;
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Reflected;
 import com.asledgehammer.rosetta.RosettaEntity;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,10 +10,13 @@ import java.lang.reflect.Parameter;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public class JavaParameter extends RosettaEntity implements NamedEntity {
+public class JavaParameter extends RosettaEntity implements NamedEntity, Reflected<Parameter> {
 
   /** Used to validate and check names assigned to parameters. */
   private static final Pattern REGEX_PARAM_NAME = Pattern.compile("^[a-zA-Z_$][a-zA-Z_$0-9]*$");
+
+  private final Parameter reflectedObject;
+  private TypeReference type;
 
   /** The formal name of the parameter. */
   private String name;
@@ -19,13 +24,16 @@ public class JavaParameter extends RosettaEntity implements NamedEntity {
   public JavaParameter(@NotNull Parameter parameter) {
     super();
 
+    this.reflectedObject = parameter;
+
     // We already know that the name is valid.
     this.name = parameter.getName();
+    this.type = TypeReference.wrap(parameter.getParameterizedType());
   }
 
-  public JavaParameter(@NotNull Map<String, Object> raw) {
-    super(raw);
-    // NOTE: The name is provided as a property through `onLoad()`.
+  @Override
+  public boolean onCompile() {
+    return true;
   }
 
   @Override
@@ -34,14 +42,21 @@ public class JavaParameter extends RosettaEntity implements NamedEntity {
     String name = (String) raw.get("name");
     setName(name);
 
-    // TODO: Load type.
+    setType(TypeReference.wrap(raw.get("type").toString()));
     // TODO: Load attributes / conditions?
   }
 
+  @NotNull
   @Override
-  protected @NotNull Map<String, Object> onSave() {
+  protected Map<String, Object> onSave() {
     // TODO: Implement.
     return Map.of();
+  }
+
+  @NotNull
+  @Override
+  public Parameter getReflectedObject() {
+    return this.reflectedObject;
   }
 
   @NotNull
@@ -64,6 +79,15 @@ public class JavaParameter extends RosettaEntity implements NamedEntity {
       throw new IllegalArgumentException("The name is not valid: " + name);
     }
     this.name = name;
+  }
+
+  @NotNull
+  public TypeReference getType() {
+    return this.type;
+  }
+
+  public void setType(@NotNull TypeReference type) {
+    this.type = type;
   }
 
   /**

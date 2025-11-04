@@ -4,6 +4,7 @@ import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Executable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,9 +19,28 @@ public class JavaExecutableList<E extends JavaExecutable> implements DirtySuppor
 
   public JavaExecutableList(@NotNull String name) {
     if (!JavaExecutable.isValidName(name)) {
-      throw new IllegalArgumentException("The name is not a valid executable name. (Given: \"" + name + "\")");
+      throw new IllegalArgumentException(
+          "The name is not a valid executable name. (Given: \"" + name + "\")");
     }
     this.name = name;
+  }
+
+  @Override
+  public boolean onCompile() {
+
+    if (executables.isEmpty()) return true;
+
+    for (E executable : executables) {
+      if (executable.isDirty()) {
+        // If one or more executables isn't compiled then halt compilation.
+        if (!executable.compile()) {
+          return false;
+        }
+      }
+    }
+
+    // All executables compiled.
+    return true;
   }
 
   /**
@@ -88,7 +108,22 @@ public class JavaExecutableList<E extends JavaExecutable> implements DirtySuppor
   }
 
   @Override
-  public String getName() {
+  public @NotNull String getName() {
     return this.name;
+  }
+
+  @NotNull
+  public E getExecutable(@NotNull Executable executable) {
+    if(executables.isEmpty()) {
+      throw new NullPointerException(executable.getClass().getSimpleName() + " isn't registered in group.");
+    }
+
+    for (E e : executables) {
+      if(e.getReflectedObject().equals(executable)) {
+        return e;
+      }
+    }
+
+    throw new NullPointerException(executable.getClass().getSimpleName() + " isn't registered in group.");
   }
 }

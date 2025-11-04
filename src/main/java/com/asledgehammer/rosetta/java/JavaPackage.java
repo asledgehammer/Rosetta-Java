@@ -2,15 +2,16 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Reflected;
 import com.asledgehammer.rosetta.RosettaEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
-public class JavaPackage extends RosettaEntity implements DirtySupported, NamedEntity {
+public class JavaPackage extends RosettaEntity
+    implements DirtySupported, NamedEntity, Reflected<Package> {
 
   /** To test Java package names for validity. */
   private static final Pattern REGEX_PKG_NAME =
@@ -22,8 +23,13 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
   /** Stores sub-package definitions. */
   private final Map<String, JavaPackage> packages = new HashMap<>();
 
+  private final Package reflectedObject;
+
   /** The package name. */
   private final String name;
+
+  /** Package-Info documentation notes. */
+  private String notes;
 
   /**
    * Creation constructor for new package definitions.
@@ -33,25 +39,44 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
   public JavaPackage(@NotNull Package pkg) {
     super();
 
+    this.reflectedObject = pkg;
+
     // We already know that this is a valid package-name.
     this.name = pkg.getName();
+
+    // TODO: Implement discovery.
   }
 
-  /**
-   * Load constructor for a serialized package definition.
-   *
-   * @param name The package-name.
-   * @param raw The raw-data loaded from a file.
-   */
-  public JavaPackage(@NotNull String name, @NotNull Map<String, Object> raw) {
-    super(raw);
+  @Override
+  public boolean onCompile() {
 
-    // Make sure the name is a valid Java package name.
-    if (!isValidName(name)) {
-      throw new IllegalArgumentException("Invalid package name: " + name);
+    // Compile class(es).
+    if (!classes.isEmpty()) {
+      List<String> keys = new ArrayList<>(classes.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+        JavaClass javaClass = classes.get(key);
+        if (javaClass.isDirty() && !javaClass.compile()) {
+          return false;
+        }
+      }
     }
 
-    this.name = name;
+    // Compile sub-package(s).
+    if (!packages.isEmpty()) {
+      List<String> keys = new ArrayList<>(packages.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+        JavaPackage javaPackage = packages.get(key);
+        if (javaPackage.isDirty() && !javaPackage.compile()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   @Override
@@ -189,7 +214,7 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
     String clazzName = clazz.getName();
     if (this.classes.containsKey(clazzName)) {
       throw new IllegalArgumentException(
-              "The package \"" + this.name + "\" already contains class: \"" + clazzName + "\"");
+          "The package \"" + this.name + "\" already contains class: \"" + clazzName + "\"");
     }
     this.classes.put(clazzName, clazz);
   }
@@ -202,7 +227,7 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
     String clazzName = clazz.getName();
     if (!this.classes.containsKey(clazzName)) {
       throw new IllegalArgumentException(
-              "The package \"" + this.name + "\" doesn't contain class: \"" + clazzName + "\"");
+          "The package \"" + this.name + "\" doesn't contain class: \"" + clazzName + "\"");
     }
     this.classes.remove(clazzName);
   }
@@ -215,15 +240,51 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
   public JavaClass removeClazz(@NotNull String clazzName) {
     if (!this.classes.containsKey(clazzName)) {
       throw new IllegalArgumentException(
-              "The package \"" + this.name + "\" doesn't contain class: \"" + clazzName + "\"");
+          "The package \"" + this.name + "\" doesn't contain class: \"" + clazzName + "\"");
     }
     return this.classes.remove(clazzName);
+  }
+
+  @Nullable
+  public String getNotes() {
+    return this.notes;
+  }
+
+  public void setNotes(@Nullable String notes) {
+    this.notes = notes;
+  }
+
+  @NotNull
+  @Override
+  public Package getReflectedObject() {
+    return reflectedObject;
   }
 
   @NotNull
   @Override
   public String getName() {
     return name;
+  }
+
+  @NotNull
+  public static String popPackagePath(@NotNull String path) {
+
+    // Make sure the package has a delimiter to grab a parent package.
+    if (!path.contains(".")) {
+      throw new IllegalArgumentException(
+          "Package path doesn't contain delimiter '.': \"" + path + "\"");
+    }
+
+    // Optimally rebuild string using arrays, popping the pseudo-stack.
+    String[] stack = path.split("\\.");
+    StringBuilder built = new StringBuilder(stack[0]);
+    if (stack.length > 2) {
+      for (int index = 1; index < stack.length - 1; index++) {
+        built.append('.').append(stack[index]);
+      }
+    }
+
+    return built.toString();
   }
 
   /**
@@ -234,5 +295,46 @@ public class JavaPackage extends RosettaEntity implements DirtySupported, NamedE
    */
   public static boolean isValidName(@NotNull String name) {
     return !name.isEmpty() && REGEX_PKG_NAME.matcher(name).find();
+  }
+
+  @Nullable
+  public static Package getSuperPackage(@NotNull Package pkg) {
+    return getSuperPackage(pkg.getName());
+  }
+
+  @Nullable
+  public static Package getSuperPackage(@NotNull Package pkg, @NotNull ClassLoader classLoader) {
+    return getSuperPackage(pkg.getName(), classLoader);
+  }
+
+  /**
+   * Resolves a super-package from a child package-path.
+   *
+   * @param path The path to the child-package.
+   * @return The super-package
+   */
+  @Nullable
+  public static Package getSuperPackage(@NotNull String path) {
+    return getSuperPackage(path, ClassLoader.getSystemClassLoader());
+  }
+
+  /**
+   * @param path The path to the child-package.
+   * @param classLoader The classLoader storing the package.
+   * @return The super-package
+   */
+  @Nullable
+  public static Package getSuperPackage(@NotNull String path, @NotNull ClassLoader classLoader) {
+    return resolve(popPackagePath(path), classLoader);
+  }
+
+  @Nullable
+  public static Package resolve(@NotNull String path) {
+    return resolve(path, ClassLoader.getSystemClassLoader());
+  }
+
+  @Nullable
+  public static Package resolve(@NotNull String path, @NotNull ClassLoader classLoader) {
+    return classLoader.getDefinedPackage(path);
   }
 }
