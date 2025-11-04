@@ -1,4 +1,4 @@
-package com.asledgehammer.reference;
+package com.asledgehammer.rosetta.java.reference;
 
 /** Any reference that supports type-boundaries. */
 public interface BoundReference {

@@ -1,4 +1,4 @@
-package com.asledgehammer.reference;
+package com.asledgehammer.rosetta.java.reference;
 
 import java.lang.reflect.Field;
 import org.jetbrains.annotations.NotNull;

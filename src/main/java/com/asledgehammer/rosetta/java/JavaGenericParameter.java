@@ -1,6 +1,6 @@
 package com.asledgehammer.rosetta.java;
 
-import com.asledgehammer.reference.TypeReference;
+import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
