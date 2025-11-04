@@ -12,35 +12,35 @@ public class CandleReference {
   }
 
   @NotNull
-  public static ClassReference wrap(@NotNull Class<?> clazz) {
-    return ClassReference.wrap(clazz);
+  public static ClassReference of(@NotNull Class<?> clazz) {
+    return ClassReference.of(clazz);
   }
 
   @NotNull
-  public static TypeReference wrap(@NotNull TypeVariable<?> typeVariable) {
-    return TypeReference.wrap(typeVariable);
+  public static TypeReference of(@NotNull TypeVariable<?> typeVariable) {
+    return TypeReference.of(typeVariable);
   }
 
   @NotNull
-  public static TypeReference wrap(@NotNull Type type) {
-    return TypeReference.wrap(type);
+  public static TypeReference of(@NotNull Type type) {
+    return TypeReference.of(type);
   }
 
   @NotNull
-  public static FieldReference wrap(@NotNull Field field) {
-    ClassReference classReference = wrap(field.getDeclaringClass());
+  public static FieldReference of(@NotNull Field field) {
+    ClassReference classReference = of(field.getDeclaringClass());
     return classReference.getFieldReference(field);
   }
 
   @NotNull
-  public static MethodReference wrap(@NotNull Method method) {
-    ClassReference classReference = wrap(method.getDeclaringClass());
+  public static MethodReference of(@NotNull Method method) {
+    ClassReference classReference = of(method.getDeclaringClass());
     return classReference.getMethodReference(method);
   }
 
   @NotNull
-  public static ConstructorReference wrap(@NotNull Constructor<?> constructor) {
-    ClassReference classReference = wrap(constructor.getDeclaringClass());
+  public static ConstructorReference of(@NotNull Constructor<?> constructor) {
+    ClassReference classReference = of(constructor.getDeclaringClass());
     return classReference.getConstructorReference(constructor);
   }
 }

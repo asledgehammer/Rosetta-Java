@@ -1,21 +1,16 @@
 package com.asledgehammer.rosetta.java;
 
-import com.asledgehammer.rosetta.Reflected;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
 import java.util.Map;
 
-public class JavaMethod extends JavaExecutable implements Reflected<Method> {
-
-  private final Method reflectedObject;
+public class JavaMethod extends JavaExecutable<Method> {
 
   private JavaReturn returns;
 
-  public JavaMethod(@NotNull Method method) {
-    super(method.getName());
-
-    this.reflectedObject = method;
+  JavaMethod(@NotNull Method method) {
+    super(method);
 
     // TODO: Implement discovery.
   }
@@ -41,11 +36,6 @@ public class JavaMethod extends JavaExecutable implements Reflected<Method> {
     }
 
     return true;
-  }
-
-  @Override
-  public @NotNull Method getReflectedObject() {
-    return this.reflectedObject;
   }
 
   @NotNull

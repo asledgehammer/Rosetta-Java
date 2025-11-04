@@ -5,14 +5,18 @@ import com.asledgehammer.rosetta.RosettaEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Type;
 import java.util.Map;
 
 public class JavaReturn extends RosettaEntity {
 
   private TypeReference type;
 
-  @Nullable
   private String notes;
+
+  public JavaReturn(@NotNull Type type) {
+    this.type = TypeReference.of(type);
+  }
 
   @Override
   public boolean onCompile() {

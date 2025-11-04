@@ -17,7 +17,7 @@ public class JavaExecutableList<E extends JavaExecutable> implements DirtySuppor
 
   private final String name;
 
-  public JavaExecutableList(@NotNull String name) {
+  JavaExecutableList(@NotNull String name) {
     if (!JavaExecutable.isValidName(name)) {
       throw new IllegalArgumentException(
           "The name is not a valid executable name. (Given: \"" + name + "\")");

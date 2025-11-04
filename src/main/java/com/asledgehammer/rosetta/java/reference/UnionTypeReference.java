@@ -63,14 +63,14 @@ public class UnionTypeReference extends TypeReference implements BoundReference 
           } else if (curr == '>') {
             level--;
           } else if (curr == '&' && level == 0) {
-            subs.add(TypeReference.wrap(currSub.toString().trim()));
+            subs.add(TypeReference.of(currSub.toString().trim()));
             currSub = new StringBuilder();
             continue;
           }
           currSub.append(curr);
         }
         if (!currSub.isEmpty()) {
-          subs.add(TypeReference.wrap(currSub.toString().trim()));
+          subs.add(TypeReference.of(currSub.toString().trim()));
         }
         bounds = new TypeReference[subs.size()];
         for (int i = 0; i < bounds.length; i++) {

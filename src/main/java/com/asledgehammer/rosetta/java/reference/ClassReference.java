@@ -30,7 +30,7 @@ public class ClassReference {
     TypeReference[] genericTypes = new TypeReference[vars.length];
     for (int i = 0; i < vars.length; i++) {
       TypeVariable<?> var = vars[i];
-      genericTypes[i] = TypeReference.wrap(var);
+      genericTypes[i] = TypeReference.of(var);
       this.genericTypesMap.put(var.getTypeName(), genericTypes[i]);
     }
 
@@ -39,7 +39,7 @@ public class ClassReference {
     if (superClazz != null) {
       Class<?> superClazzClazz = clazz.getSuperclass();
       assignedSuperVariables.put(superClazzClazz, createTypeMap(superClazzClazz, superClazz));
-      superClazzReference = wrap(superClazzClazz);
+      superClazzReference = of(superClazzClazz);
     } else {
       superClazzReference = null;
     }
@@ -52,7 +52,7 @@ public class ClassReference {
         Class<?> interfazeClazz = interfazeClazzes[i];
         Type interfaze = interfazes[i];
         assignedSuperVariables.put(interfazeClazz, createTypeMap(interfazeClazz, interfaze));
-        superInterfazeReferences[i] = wrap(interfazeClazz);
+        superInterfazeReferences[i] = of(interfazeClazz);
       }
     }
 
@@ -128,11 +128,11 @@ public class ClassReference {
   }
 
   public TypeReference resolveType(@NotNull String type, @NotNull Class<?> deCl) {
-    return resolveType(TypeReference.wrap(type), deCl);
+    return resolveType(TypeReference.of(type), deCl);
   }
 
   public TypeReference resolveType(@NotNull Type type, @NotNull Class<?> deCl) {
-    return resolveType(TypeReference.wrap(type), deCl);
+    return resolveType(TypeReference.of(type), deCl);
   }
 
   public TypeReference resolveType(@NotNull TypeReference type, @NotNull Class<?> deCl) {
@@ -211,7 +211,7 @@ public class ClassReference {
   }
 
   @NotNull
-  public static ClassReference wrap(@NotNull Class<?> clazz) {
+  public static ClassReference of(@NotNull Class<?> clazz) {
     if (CACHE.containsKey(clazz)) return CACHE.get(clazz);
     return new ClassReference(clazz);
   }
@@ -244,7 +244,7 @@ public class ClassReference {
           break;
         }
       } else if (curr == ',' && height == 1) {
-        vars.add(TypeReference.wrap(var.toString()));
+        vars.add(TypeReference.of(var.toString()));
         var = new StringBuilder();
       } else if (height != 0) {
         var.append(curr);
@@ -252,7 +252,7 @@ public class ClassReference {
     }
 
     if (!var.isEmpty()) {
-      vars.add(TypeReference.wrap(var.toString()));
+      vars.add(TypeReference.of(var.toString()));
     }
 
     Map<String, TypeReference> map = new HashMap<>();
@@ -282,7 +282,7 @@ public class ClassReference {
     Method mGet = deCl.getMethod("get", int.class);
     Method mDoThing = deCl.getMethod("doThing");
 
-    ClassReference reference = ClassReference.wrap(deCl);
+    ClassReference reference = ClassReference.of(deCl);
     MethodReference mrGet = reference.getMethodReference(mGet);
     MethodReference mrDoThing = reference.getMethodReference(mDoThing);
 

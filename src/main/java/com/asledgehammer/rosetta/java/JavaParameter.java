@@ -28,7 +28,7 @@ public class JavaParameter extends RosettaEntity implements NamedEntity, Reflect
 
     // We already know that the name is valid.
     this.name = parameter.getName();
-    this.type = TypeReference.wrap(parameter.getParameterizedType());
+    this.type = TypeReference.of(parameter.getParameterizedType());
   }
 
   @Override
@@ -42,7 +42,7 @@ public class JavaParameter extends RosettaEntity implements NamedEntity, Reflect
     String name = (String) raw.get("name");
     setName(name);
 
-    setType(TypeReference.wrap(raw.get("type").toString()));
+    setType(TypeReference.of(raw.get("type").toString()));
     // TODO: Load attributes / conditions?
   }
 

@@ -22,7 +22,7 @@ public abstract class ExecutableReference<E extends Executable> {
     TypeVariable<?>[] vars = this.executable.getTypeParameters();
     this.bounds = new TypeReference[vars.length];
     for (int i = 0; i < vars.length; i++) {
-      this.bounds[i] = TypeReference.wrap(vars[i]);
+      this.bounds[i] = TypeReference.of(vars[i]);
     }
 
     // Compile parameter(s).

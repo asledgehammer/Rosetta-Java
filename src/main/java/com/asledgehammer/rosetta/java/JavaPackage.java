@@ -36,7 +36,7 @@ public class JavaPackage extends RosettaEntity
    *
    * @param pkg The Java-Reflection package instance.
    */
-  public JavaPackage(@NotNull Package pkg) {
+  JavaPackage(@NotNull Package pkg) {
     super();
 
     this.reflectedObject = pkg;

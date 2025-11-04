@@ -9,7 +9,7 @@ public class SimpleTypeReference extends TypeReference {
   static final TypeReference[] OBJECT_BOUNDS;
 
   static {
-    OBJECT_BOUNDS = new TypeReference[] {TypeReference.wrap(Object.class)};
+    OBJECT_BOUNDS = new TypeReference[] {TypeReference.of(Object.class)};
   }
 
   private final List<TypeReference> subTypes;
@@ -25,7 +25,7 @@ public class SimpleTypeReference extends TypeReference {
       List<String> subTypesStr = getGenericTypes(raw);
       subTypes = new ArrayList<>();
       for (String subTypeStr : subTypesStr) {
-        subTypes.add(TypeReference.wrap(subTypeStr));
+        subTypes.add(TypeReference.of(subTypeStr));
       }
     } else {
       String base = raw.trim();

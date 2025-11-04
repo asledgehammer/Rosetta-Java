@@ -18,7 +18,7 @@ public class JavaField extends RosettaEntity implements Reflected<Field> {
     super();
 
     this.reflectedObject = field;
-    this.type = TypeReference.wrap(field.getGenericType());
+    this.type = TypeReference.of(field.getGenericType());
   }
 
   @Override

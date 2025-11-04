@@ -29,7 +29,7 @@ public abstract class TypeReference {
     PRIMITIVE_TYPES.add("double");
     PRIMITIVE_TYPES.add("long");
 
-    OBJECT_TYPE = wrap(Object.class);
+    OBJECT_TYPE = of(Object.class);
     OBJECT_TYPE_MAP = new TypeReference[] {OBJECT_TYPE};
   }
 
@@ -57,12 +57,12 @@ public abstract class TypeReference {
   public abstract TypeReference[] getBounds();
 
   @NotNull
-  public static TypeReference wrap(@NotNull TypeVariable<?> type) {
+  public static TypeReference of(@NotNull TypeVariable<?> type) {
     if (CACHE.containsKey(type)) return CACHE.get(type);
     Type[] bounds = type.getBounds();
     TypeReference[] trBounds = new TypeReference[bounds.length];
     for (int i = 0; i < bounds.length; i++) {
-      trBounds[i] = wrap(bounds[i]);
+      trBounds[i] = of(bounds[i]);
     }
     TypeReference reference = new UnionTypeReference(type.getTypeName(), true, trBounds);
     CACHE.put(type, reference);
@@ -70,25 +70,25 @@ public abstract class TypeReference {
   }
 
   @NotNull
-  public static TypeReference wrap(@NotNull Type type) {
+  public static TypeReference of(@NotNull Type type) {
     if (CACHE.containsKey(type)) return CACHE.get(type);
-    TypeReference reference = wrap(type.getTypeName());
+    TypeReference reference = of(type.getTypeName());
     CACHE.put(type, reference);
     return reference;
   }
 
   @NotNull
-  public static TypeReference wrap(@NotNull Class<?> clazz) {
+  public static TypeReference of(@NotNull Class<?> clazz) {
     if (CACHE.containsKey(clazz)) {
       return CACHE.get(clazz);
     }
-    TypeReference reference = wrap(clazz.getTypeName());
+    TypeReference reference = of(clazz.getTypeName());
     CACHE.put(clazz, reference);
     return reference;
   }
 
   @NotNull
-  public static TypeReference wrap(@NotNull String rawType) {
+  public static TypeReference of(@NotNull String rawType) {
     // No need to iterate.
     if (!rawType.contains("&")) {
       TypeReference reference = new SimpleTypeReference(rawType);
@@ -113,7 +113,7 @@ public abstract class TypeReference {
 
     TypeReference[] typeAliases = new TypeReference[list.size()];
     for (int i = 0; i < typeAliases.length; i++) {
-      typeAliases[i] = wrap(list.get(i));
+      typeAliases[i] = of(list.get(i));
     }
 
     return new UnionTypeReference(base, extendsOrSuper, typeAliases);
@@ -150,7 +150,7 @@ public abstract class TypeReference {
   private static class TestType<J, K extends Map<J, String>> extends ArrayList<K> {}
 
   public static void main(String[] args) {
-    TypeReference reference = wrap(TestType.class.getTypeParameters()[1]);
+    TypeReference reference = of(TestType.class.getTypeParameters()[1]);
     System.out.println(reference);
   }
 }

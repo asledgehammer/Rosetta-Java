@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class JavaConstructor extends JavaExecutable<Constructor<?>> {
 
-  public JavaConstructor(@NotNull Constructor<?> constructor) {
+  JavaConstructor(@NotNull Constructor<?> constructor) {
     super(constructor);
   }
 
