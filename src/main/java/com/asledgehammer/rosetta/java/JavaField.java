@@ -1,14 +1,13 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.java.reference.TypeReference;
-import com.asledgehammer.rosetta.Reflected;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.util.Map;
 
-public class JavaField extends RosettaEntity implements Reflected<Field> {
+public class JavaField extends RosettaObject implements ReflectedReferenceable<Field> {
 
   private final Field reflectedObject;
 

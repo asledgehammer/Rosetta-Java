@@ -4,13 +4,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-public abstract class RosettaEntity implements DirtySupported {
+public abstract class RosettaObject implements DirtySupported {
 
   private boolean dirty = false;
 
-  protected RosettaEntity() {}
+  protected RosettaObject() {}
 
-  protected RosettaEntity(@NotNull Map<String, Object> raw) {
+  protected RosettaObject(@NotNull Map<String, Object> raw) {
     onLoad(raw);
   }
 

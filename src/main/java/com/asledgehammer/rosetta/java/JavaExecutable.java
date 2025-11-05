@@ -2,8 +2,7 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
-import com.asledgehammer.rosetta.Reflected;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Constructor;
@@ -17,8 +16,8 @@ import java.util.regex.Pattern;
 /**
  * @param <E> The type of {@link Executable} ({@link Method} or {@link Constructor})
  */
-public abstract class JavaExecutable<E extends Executable> extends RosettaEntity
-    implements DirtySupported, NamedEntity, Reflected<E> {
+public abstract class JavaExecutable<E extends Executable> extends RosettaObject
+    implements DirtySupported, NamedEntity, ReflectedReferenceable<E> {
 
   /** Used to validate method names passed from serialized files. */
   private static final Pattern REGEX_EXECUTABLE_NAME = Pattern.compile("^[a-z][a-zA-Z0-9]*$");
@@ -153,7 +152,7 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaEntity
    * @return The serialized signature.
    * @throws NullPointerException If the executable is null.
    */
-  public static String createSignature(@NotNull JavaExecutable executable) {
+  public static String createSignature(@NotNull JavaExecutable<?> executable) {
     // TODO: Implement.
     return "";
   }

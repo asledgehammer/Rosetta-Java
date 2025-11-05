@@ -1,29 +1,44 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.NamedEntity;
-import com.asledgehammer.rosetta.Reflected;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.*;
 
-public class JavaClass extends RosettaEntity implements NamedEntity, Reflected<Class<?>> {
+public class JavaClass extends RosettaObject
+    implements NamedEntity, ReflectedReferenceable<Class<?>> {
 
   private final Map<String, JavaField> fields = new HashMap<>();
   private final Map<String, JavaExecutableList<JavaMethod>> methods = new HashMap<>();
   private final Map<String, JavaExecutableList<JavaConstructor>> constructors = new HashMap<>();
   private final List<JavaGenericParameter> parameters = new ArrayList<>();
-  private final Class<?> reflectedObject;
+  private Class<?> reflectedObject;
   private final String name;
 
-  JavaClass(@NotNull Class<?> clazz) {
+  private final JavaPackage pkg;
+
+  JavaClass(@NotNull JavaPackage pkg, @NotNull Class<?> clazz) {
     super();
 
-    this.reflectedObject = clazz;
+    this.pkg = pkg;
     this.name = clazz.getSimpleName();
 
+    this.reflectedObject = clazz;
+
     // TODO: Implement discovery.
+  }
+
+  JavaClass(@NotNull JavaPackage pkg, @NotNull String name, @NotNull Map<String, Object> raw) {
+    super(raw);
+
+    this.pkg = pkg;
+    this.name = name;
+
+    // TODO: Implement attempt resolution.
+    this.reflectedObject = null;
   }
 
   @Override
@@ -121,5 +136,9 @@ public class JavaClass extends RosettaEntity implements NamedEntity, Reflected<C
   @Override
   public Class<?> getReflectedObject() {
     return this.reflectedObject;
+  }
+
+  void setReflectedObject(@Nullable Class<?> reflectedObject) {
+    this.reflectedObject = reflectedObject;
   }
 }

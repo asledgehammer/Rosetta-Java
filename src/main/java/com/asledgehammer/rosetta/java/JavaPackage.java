@@ -2,16 +2,15 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
-import com.asledgehammer.rosetta.Reflected;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class JavaPackage extends RosettaEntity
-    implements DirtySupported, NamedEntity, Reflected<Package> {
+public class JavaPackage extends RosettaObject
+    implements DirtySupported, NamedEntity, ReflectedReferenceable<Package> {
 
   /** To test Java package names for validity. */
   private static final Pattern REGEX_PKG_NAME =
@@ -23,10 +22,16 @@ public class JavaPackage extends RosettaEntity
   /** Stores sub-package definitions. */
   private final Map<String, JavaPackage> packages = new HashMap<>();
 
-  private final Package reflectedObject;
+  private Package reflectedObject;
 
   /** The package name. */
   private final String name;
+
+  private final String path;
+
+  private final JavaPackage parent;
+
+  private final JavaPool pool;
 
   /** Package-Info documentation notes. */
   private String notes;
@@ -36,15 +41,46 @@ public class JavaPackage extends RosettaEntity
    *
    * @param pkg The Java-Reflection package instance.
    */
-  JavaPackage(@NotNull Package pkg) {
+  JavaPackage(@NotNull JavaPool pool, @Nullable JavaPackage parent, @NotNull Package pkg) {
     super();
+
+    this.pool = pool;
+
+    this.parent = parent;
 
     this.reflectedObject = pkg;
 
     // We already know that this is a valid package-name.
-    this.name = pkg.getName();
+    this.path = pkg.getName();
+    if (this.path.contains(".")) {
+      String[] split = path.split("\\.");
+      this.name = split[split.length - 1];
+    } else {
+      this.name = this.path;
+    }
 
     // TODO: Implement discovery.
+  }
+
+  JavaPackage(
+      @NotNull JavaPool pool,
+      @Nullable JavaPackage parent,
+      @NotNull String name,
+      @NotNull Map<String, Object> raw) {
+    super();
+
+    this.pool = pool;
+    this.parent = parent;
+    if (parent != null) {
+      this.path = parent.path + '.' + name;
+    } else {
+      this.path = name;
+    }
+    this.name = name;
+
+    this.reflectedObject = resolve(this.path);
+
+    onLoad(raw);
   }
 
   @Override
@@ -258,6 +294,10 @@ public class JavaPackage extends RosettaEntity
   @Override
   public Package getReflectedObject() {
     return reflectedObject;
+  }
+
+  void setReflectedObject(@Nullable Package reflectedObject) {
+    this.reflectedObject = reflectedObject;
   }
 
   @NotNull

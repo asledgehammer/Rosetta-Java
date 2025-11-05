@@ -2,15 +2,14 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.NamedEntity;
-import com.asledgehammer.rosetta.Reflected;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Parameter;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public class JavaParameter extends RosettaEntity implements NamedEntity, Reflected<Parameter> {
+public class JavaParameter extends RosettaObject implements NamedEntity, ReflectedReferenceable<Parameter> {
 
   /** Used to validate and check names assigned to parameters. */
   private static final Pattern REGEX_PARAM_NAME = Pattern.compile("^[a-zA-Z_$][a-zA-Z_$0-9]*$");

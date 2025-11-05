@@ -1,7 +1,5 @@
 package com.asledgehammer.rosetta;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.DumpSettings;
 import org.snakeyaml.engine.v2.api.Load;
@@ -20,27 +18,11 @@ public class Rosetta {
     DEFAULT_DUMP = new Dump(dumpSettings);
   }
 
-  private final Load load;
-  private final Dump dump;
-
-  private Rosetta(@Nullable Load load, @Nullable Dump dump) {
-    if (load == null) {
-      load = DEFAULT_LOAD;
-    }
-    this.load = load;
-    if (dump == null) {
-      dump = DEFAULT_DUMP;
-    }
-    this.dump = dump;
+  public static Dump getYamlWriter() {
+    return DEFAULT_DUMP;
   }
 
-  @NotNull
-  public Load getLoad() {
-    return this.load;
-  }
-
-  @NotNull
-  public Dump getDump() {
-    return this.dump;
+  public static Load getYamlReader() {
+    return DEFAULT_LOAD;
   }
 }

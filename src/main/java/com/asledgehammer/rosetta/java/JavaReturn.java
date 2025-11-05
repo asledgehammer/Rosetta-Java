@@ -1,14 +1,14 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.java.reference.TypeReference;
-import com.asledgehammer.rosetta.RosettaEntity;
+import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
 import java.util.Map;
 
-public class JavaReturn extends RosettaEntity {
+public class JavaReturn extends RosettaObject {
 
   private TypeReference type;
 
