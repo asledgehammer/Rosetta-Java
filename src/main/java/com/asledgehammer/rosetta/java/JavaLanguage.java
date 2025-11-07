@@ -1,14 +1,9 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.RosettaLanguage;
-import com.asledgehammer.rosetta.Rosetta;
 import com.asledgehammer.rosetta.exception.RosettaException;
 import org.jetbrains.annotations.NotNull;
-import org.snakeyaml.engine.v2.api.Load;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -65,7 +60,8 @@ public class JavaLanguage implements RosettaLanguage {
     }
 
     // Create & cache the class definition.
-    JavaClass javaClass = new JavaClass(clazz);
+    JavaPackage javaPackage = of(clazz.getPackage());
+    JavaClass javaClass = new JavaClass(javaPackage, clazz);
     classes.put(qualifiedPath, javaClass);
     return javaClass;
   }
@@ -77,46 +73,9 @@ public class JavaLanguage implements RosettaLanguage {
     return javaClass.getMethod(method);
   }
 
-  public void load(@NotNull File file) throws FileNotFoundException {
-    Load reader = Rosetta.getYamlReader();
-    Iterable<Object> oRaw = reader.loadAllFromReader(new FileReader(file));
-
-    if (!(oRaw instanceof Map)) {
-      throw new RuntimeException("Improperly formatted Rosetta YAML: " + file.getPath());
-    }
-
-    loadInternal((Map<String, Object>) oRaw);
-  }
-
-  public void load(@NotNull String yaml) {
-
-    if (yaml.isEmpty()) {
-      throw new IllegalArgumentException("The YAML string is empty.");
-    }
-
-    Load reader = Rosetta.getYamlReader();
-    Iterable<Object> oRaw = reader.loadAllFromString(yaml);
-
-    if (!(oRaw instanceof Map)) {
-      throw new RuntimeException("Improperly formatted Rosetta YAML:\n" + yaml);
-    }
-
-    loadInternal((Map<String, Object>) oRaw);
-  }
-
-  @SuppressWarnings("unchecked")
-  private void loadInternal(@NotNull Map<String, Object> raw) {
-
-
-
-    // No Java definitions? Return.
-    if (!languages.containsKey("java")) return;
-
-    final Object oJava = languages.get("java");
-    if (!(oJava instanceof Map)) {
-      throw new RosettaException("The property \"languages.java\" is not a dictionary.");
-    }
-    final Map<String, Object> java = (Map<String, Object>) oJava;
+  @Override
+  @SuppressWarnings({"unchecked"})
+  public void onLoad(@NotNull Map<String, Object> java) {
 
     // No Java packages? Return.
     if (!java.containsKey("packages")) return;
@@ -136,14 +95,8 @@ public class JavaLanguage implements RosettaLanguage {
             "The property \"languages.java.packages." + key + "\" is not a dictionary.");
       }
       JavaPackage javaPackage = new JavaPackage(this, null, key, (Map<String, Object>) oPackage);
+      packages.put(javaPackage.getName(), javaPackage);
     }
-  }
-
-  private void loadPackage(String name, Map<String, Object> raw) {}
-
-  @Override
-  public void onLoad(@NotNull Map<String, Object> language) {
-    // TODO: Implement.
   }
 
   @Override

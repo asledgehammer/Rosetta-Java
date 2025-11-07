@@ -5,11 +5,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 
 /**
- * LanguagePools handles the loading, storing, and serialization of language-level definitions in
+ * RosettaLanguage handles the loading, storing, and serialization of language-level definitions in
  * Rosetta.
  *
  * <p>Implementations <b>must</b> have a public constructor with no arguments to work. Register them
- * using {@link Rosetta#registerLanguage(RosettaLanguage language)}.
+ * using {@link Rosetta#registerLanguage(String, Class)}.
  */
 public interface RosettaLanguage {
 

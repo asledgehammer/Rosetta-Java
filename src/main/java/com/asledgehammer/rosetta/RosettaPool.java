@@ -2,7 +2,10 @@ package com.asledgehammer.rosetta;
 
 import com.asledgehammer.rosetta.exception.RosettaException;
 import org.jetbrains.annotations.NotNull;
+import org.snakeyaml.engine.v2.api.Dump;
+import org.snakeyaml.engine.v2.api.Load;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -28,31 +31,114 @@ public class RosettaPool {
 
   public RosettaPool() {}
 
+  /**
+   * Loads rosetta data from a {@link File}.
+   *
+   * @param file The file storing the YAML encoded data.
+   * @throws NullPointerException If the file is null.
+   * @throws IOException If something is thrown during the process of loading and reading the file.
+   */
   @SuppressWarnings({"unchecked"})
-  public void onLoad(@NotNull Map<String, Object> raw) {
+  public void load(@NotNull File file) throws IOException {
+    Load reader = Rosetta.getYamlReader();
+    Object raw = reader.loadAllFromReader(new FileReader(file));
+    if (!(raw instanceof Map)) {
+      throw new RosettaException(
+          "Invalid YAML root type: " + raw.getClass().getName() + " (Must be dictionary/Map)");
+    }
+    onLoad((Map<String, Object>) raw);
+  }
+
+  /**
+   * Loads rosetta data from an {@link Reader}.
+   *
+   * @param reader The reader transmitting the YAML encoded data.
+   * @throws NullPointerException If the reader is null.
+   */
+  @SuppressWarnings({"unchecked"})
+  public void load(@NotNull Reader reader) {
+    Load load = Rosetta.getYamlReader();
+    Object raw = load.loadAllFromReader(reader);
+    if (!(raw instanceof Map)) {
+      throw new RosettaException(
+          "Invalid YAML root type: " + raw.getClass().getName() + " (Must be dictionary/Map)");
+    }
+    onLoad((Map<String, Object>) raw);
+  }
+
+  /**
+   * Loads rosetta data from an {@link InputStream}.
+   *
+   * @param stream The stream transmitting the YAML encoded data.
+   * @throws NullPointerException If the stream is null.
+   */
+  @SuppressWarnings({"unchecked"})
+  public void load(@NotNull InputStream stream) {
+    Load load = Rosetta.getYamlReader();
+    Object raw = load.loadFromInputStream(stream);
+    if (!(raw instanceof Map)) {
+      throw new RosettaException(
+          "Invalid YAML root type: " + raw.getClass().getName() + " (Must be dictionary/Map)");
+    }
+    onLoad((Map<String, Object>) raw);
+  }
+
+  /**
+   * Loads rosetta data from a YAML string.
+   *
+   * @param yaml The YAML encoded data.
+   * @throws NullPointerException If the YAML string is null.
+   */
+  @SuppressWarnings({"unchecked"})
+  public void load(@NotNull String yaml) {
+
+    if (yaml.isEmpty()) {
+      throw new IllegalArgumentException("The YAML string is empty.");
+    }
+
+    Load reader = Rosetta.getYamlReader();
+    Iterable<Object> oRaw = reader.loadAllFromString(yaml);
+
+    if (!(oRaw instanceof Map)) {
+      throw new RuntimeException("Improperly formatted Rosetta YAML:\n" + yaml);
+    }
+
+    onLoad((Map<String, Object>) oRaw);
+  }
+
+  /**
+   * @param data The serialized map of rosetta data to process.
+   * @throws NullPointerException If the raw map is null.
+   */
+  @SuppressWarnings({"unchecked"})
+  private void onLoad(@NotNull Map<String, Object> data) {
     // Grab the key.
-    if (!raw.containsKey("version")) {
+    if (!data.containsKey("version")) {
       throw new RosettaException("Missing \"version\" property at root of Rosetta YAML file.");
     }
 
     // If multi-version support in the future, convert to switch-table.
-    final String version = raw.get("version").toString().trim();
+    final String version = data.get("version").toString().trim();
     if (!version.equals("1.2")) {
       throw new RosettaException("Unknown version: " + version);
     }
 
-    if (!raw.containsKey("languages")) {
+    if (!data.containsKey("languages")) {
       // No definitions? Return.
       return;
     }
 
-    final Object oLanguages = raw.get("languages");
+    final Object oLanguages = data.get("languages");
     if (!(oLanguages instanceof Map)) {
       throw new RosettaException("The property \"languages\" is not a dictionary.");
     }
     onLoadLanguages((Map<String, Object>) oLanguages);
   }
 
+  /**
+   * @param languages The serialized map of languages data to process.
+   * @throws NullPointerException If the languages map is null.
+   */
   @SuppressWarnings({"unchecked"})
   private void onLoadLanguages(@NotNull Map<String, Object> languages) {
     final List<String> keys = new ArrayList<>(languages.keySet());
@@ -71,6 +157,10 @@ public class RosettaPool {
     }
   }
 
+  /**
+   * @param applications The serialized map of application data to process.
+   * @throws NullPointerException If the applications map is null.
+   */
   @SuppressWarnings({"unchecked"})
   private void onLoadApplications(@NotNull Map<String, Object> applications) {
     final List<String> keys = new ArrayList<>(applications.keySet());
@@ -87,6 +177,54 @@ public class RosettaPool {
       }
       application.onLoad((Map<String, Object>) applications.get(key));
     }
+  }
+
+  /**
+   * @param file The file to write.
+   * @throws NullPointerException If the file is null.
+   */
+  public void save(@NotNull File file) {
+    try (FileWriter fw = new FileWriter(file)) {
+      fw.write(save());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * @param writer The writer to write.
+   * @throws NullPointerException If the writer is null.
+   * @throws IOException If something happens during the writing of contents.
+   */
+  public void save(@NotNull BufferedWriter writer) throws IOException {
+    writer.write(save());
+  }
+
+  /**
+   * @param stream The stream to write.
+   * @throws NullPointerException If the stream is null.
+   * @throws IOException If something happens during the writing of contents.
+   */
+  public void save(@NotNull DataOutputStream stream) throws IOException {
+    stream.writeUTF(save());
+  }
+
+  /**
+   * @return A YAML-Serialized string.
+   */
+  @NotNull
+  public String save() {
+    return save(Rosetta.getYamlWriter());
+  }
+
+  /**
+   * @param writer The SnakeYAML Dump instance to serialize the pool.
+   * @return A YAML-Serialized string.
+   * @throws NullPointerException If the writer is null.
+   */
+  @NotNull
+  public String save(@NotNull Dump writer) {
+    return writer.dumpToString(onSave());
   }
 
   @NotNull
