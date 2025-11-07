@@ -31,7 +31,7 @@ public class JavaPackage extends RosettaObject
 
   private final JavaPackage parent;
 
-  private final JavaPool pool;
+  private final JavaLanguage pool;
 
   /** Package-Info documentation notes. */
   private String notes;
@@ -41,7 +41,7 @@ public class JavaPackage extends RosettaObject
    *
    * @param pkg The Java-Reflection package instance.
    */
-  JavaPackage(@NotNull JavaPool pool, @Nullable JavaPackage parent, @NotNull Package pkg) {
+  JavaPackage(@NotNull JavaLanguage pool, @Nullable JavaPackage parent, @NotNull Package pkg) {
     super();
 
     this.pool = pool;
@@ -63,7 +63,7 @@ public class JavaPackage extends RosettaObject
   }
 
   JavaPackage(
-      @NotNull JavaPool pool,
+      @NotNull JavaLanguage pool,
       @Nullable JavaPackage parent,
       @NotNull String name,
       @NotNull Map<String, Object> raw) {

@@ -1,7 +1,8 @@
 package com.asledgehammer.rosetta.java;
 
+import com.asledgehammer.rosetta.RosettaLanguage;
 import com.asledgehammer.rosetta.Rosetta;
-import com.asledgehammer.rosetta.RosettaException;
+import com.asledgehammer.rosetta.exception.RosettaException;
 import org.jetbrains.annotations.NotNull;
 import org.snakeyaml.engine.v2.api.Load;
 
@@ -11,12 +12,12 @@ import java.io.FileReader;
 import java.lang.reflect.Method;
 import java.util.*;
 
-public class JavaPool {
+public class JavaLanguage implements RosettaLanguage {
 
   final Map<String, JavaClass> classes = new HashMap<>();
   final Map<String, JavaPackage> packages = new HashMap<>();
 
-  public JavaPool() {}
+  public JavaLanguage() {}
 
   @NotNull
   public JavaPackage of(@NotNull Package pkg) {
@@ -106,27 +107,7 @@ public class JavaPool {
   @SuppressWarnings("unchecked")
   private void loadInternal(@NotNull Map<String, Object> raw) {
 
-    // Grab the key.
-    if (!raw.containsKey("version")) {
-      throw new RosettaException("Missing \"version\" property at root of Rosetta YAML file.");
-    }
 
-    // If multi-version support in the future, convert to switch-table.
-    final String version = raw.get("version").toString().trim();
-    if (!version.equals("1.2")) {
-      throw new RosettaException("Unknown version: " + version);
-    }
-
-    if (!raw.containsKey("languages")) {
-      // No definitions? Return.
-      return;
-    }
-
-    final Object oLanguages = raw.get("languages");
-    if (!(oLanguages instanceof Map)) {
-      throw new RosettaException("The property \"languages\" is not a dictionary.");
-    }
-    final Map<String, Object> languages = (Map<String, Object>) oLanguages;
 
     // No Java definitions? Return.
     if (!languages.containsKey("java")) return;
@@ -160,13 +141,20 @@ public class JavaPool {
 
   private void loadPackage(String name, Map<String, Object> raw) {}
 
-  @NotNull
-  public Map<String, Object> save() {
+  @Override
+  public void onLoad(@NotNull Map<String, Object> language) {
+    // TODO: Implement.
+  }
+
+  @Override
+  public @NotNull Map<String, Object> onSave() {
     // TODO: Implement.
     return Map.of();
   }
 
-  public void save(@NotNull File file) {
-    // TODO: Implement.
+  @NotNull
+  @Override
+  public String getID() {
+    return "java";
   }
 }
