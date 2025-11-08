@@ -44,6 +44,8 @@ public class JavaPackage extends RosettaObject
   JavaPackage(@NotNull JavaLanguage lang, @Nullable JavaPackage parent, @NotNull Package pkg) {
     super();
 
+    System.out.println("new JavaPackage(parent = " + parent + ", pkg = " + pkg + ")");
+
     this.language = lang;
 
     this.parent = parent;
@@ -62,12 +64,38 @@ public class JavaPackage extends RosettaObject
     // TODO: Implement discovery.
   }
 
+  /**
+   * Creation constructor used for packages without any classes in them. (Package object passed is
+   * null)
+   *
+   * @param lang
+   * @param parent
+   * @param name
+   */
+  JavaPackage(@NotNull JavaLanguage lang, @Nullable JavaPackage parent, @NotNull String name) {
+    super();
+
+    System.out.println("new JavaPackage(name = " + name + ")");
+
+    this.language = lang;
+    this.parent = parent;
+    if (parent != null) {
+      this.path = parent.path + '.' + name;
+    } else {
+      this.path = name;
+    }
+    this.name = name;
+    this.reflectedObject = null;
+  }
+
   JavaPackage(
       @NotNull JavaLanguage lang,
       @Nullable JavaPackage parent,
       @NotNull String name,
       @NotNull Map<String, Object> raw) {
     super();
+
+    System.out.println("new JavaPackage(name = " + name + ", raw = " + raw + ")");
 
     this.language = lang;
     this.parent = parent;
@@ -299,6 +327,11 @@ public class JavaPackage extends RosettaObject
 
   void setReflectedObject(@Nullable Package reflectedObject) {
     this.reflectedObject = reflectedObject;
+  }
+
+  @Override
+  public String toString() {
+    return "JavaPackage \"" + getPath() + "\"";
   }
 
   @NotNull

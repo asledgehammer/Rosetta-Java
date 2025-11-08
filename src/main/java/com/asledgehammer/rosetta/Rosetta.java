@@ -11,6 +11,8 @@ import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
 import org.snakeyaml.engine.v2.common.FlowStyle;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -174,6 +176,18 @@ public class Rosetta {
     } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
       throw new RuntimeException("Failed to instantiate: " + clazz.getName(), e);
     }
+  }
+
+  @NotNull
+  public static RosettaCollection load(@NotNull File file) throws IOException {
+    RosettaCollection collection = new RosettaCollection();
+    collection.load(file);
+    return collection;
+  }
+
+  @NotNull
+  public static RosettaCollection createCollection() {
+    return new RosettaCollection();
   }
 
   @NotNull

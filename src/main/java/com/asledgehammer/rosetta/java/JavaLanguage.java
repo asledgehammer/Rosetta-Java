@@ -28,20 +28,22 @@ public class JavaLanguage implements RosettaLanguage {
       String[] split = path.split("\\.");
       if (split.length == 2) {
         Package pkgParent = JavaPackage.resolve(split[0]);
-        if (pkgParent == null) {
-          throw new RosettaException("Could not resolve parent package: " + split[0]);
+        if (pkgParent != null) {
+          parent = of(pkgParent);
+        } else {
+          parent = ofInternalPackage(split[0]);
         }
-        parent = of(pkgParent);
       } else {
         StringBuilder join = new StringBuilder(split[0]);
         for (int i = 1; i < split.length - 1; i++) {
           join.append(".").append(split[i]);
         }
         Package pkgParent = JavaPackage.resolve(join.toString());
-        if (pkgParent == null) {
-          throw new RosettaException("Could not resolve parent package: " + join);
+        if (pkgParent != null) {
+          parent = of(pkgParent);
+        } else {
+          parent = ofInternalPackage(join.toString());
         }
-        parent = of(pkgParent);
       }
     }
 
@@ -50,6 +52,41 @@ public class JavaLanguage implements RosettaLanguage {
     packages.put(path, javaPackage);
 
     return javaPackage;
+  }
+
+  private JavaPackage ofInternalPackage(@NotNull String path) {
+
+    JavaPackage parent = null;
+    String name;
+    if (path.contains(".")) {
+      String[] split = path.split("\\.");
+      name = split[split.length - 1];
+      // TODO: Join
+
+      if (split.length == 2) {
+        Package pkgParent = JavaPackage.resolve(split[0]);
+        if (pkgParent != null) {
+          parent = of(pkgParent);
+        } else {
+          parent = ofInternalPackage(split[0]);
+        }
+      } else {
+        StringBuilder join = new StringBuilder(split[0]);
+        for (int i = 1; i < split.length - 1; i++) {
+          join.append(".").append(split[i]);
+        }
+        Package pkgParent = JavaPackage.resolve(join.toString());
+        if (pkgParent != null) {
+          parent = of(pkgParent);
+        } else {
+          parent = ofInternalPackage(join.toString());
+        }
+      }
+    } else {
+      name = path;
+    }
+
+    return new JavaPackage(this, parent, name);
   }
 
   @NotNull

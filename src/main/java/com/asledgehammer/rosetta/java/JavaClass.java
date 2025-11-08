@@ -101,6 +101,11 @@ public class JavaClass extends RosettaObject
   }
 
   @Override
+  public String toString() {
+    return "JavaClass \"" + getPackage().getPath() + "." + getName() + "\"";
+  }
+
+  @Override
   public @NotNull String getName() {
     return name;
   }
@@ -144,6 +149,11 @@ public class JavaClass extends RosettaObject
 
   void setReflectedObject(@Nullable Class<?> reflectedObject) {
     this.reflectedObject = reflectedObject;
+  }
+
+  @NotNull
+  public JavaPackage getPackage() {
+    return pkg;
   }
 
   @Nullable
