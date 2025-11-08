@@ -9,7 +9,7 @@ import java.io.*;
 import java.util.*;
 
 /**
- * RosettaPools store a group or collection of Rosetta data in a pooled way.
+ * RosettaCollection store a group or collection of Rosetta data.
  *
  * <p>Rosetta has two main dataset schema types:
  *
@@ -18,18 +18,13 @@ import java.util.*;
  *   <li>Application-specific: Application-specific datasets of language data structured in a way
  *       that applies to said-application.
  * </ul>
- *
- * <p>NOTE: The implementing code must decide how to syndicate serialized Rosetta pools. One way is
- * to pool for each file if the purpose is to load, read, modify and save the same data in the same
- * container. Another way is to handle all Rosetta data in one pool and serialize into one
- * container.
  */
-public class RosettaPool {
+public class RosettaCollection {
 
   private final Map<String, RosettaLanguage> languages = new HashMap<>();
   private final Map<String, RosettaApplication> applications = new HashMap<>();
 
-  public RosettaPool() {}
+  public RosettaCollection() {}
 
   /**
    * Loads rosetta data from a {@link File}.
@@ -218,7 +213,7 @@ public class RosettaPool {
   }
 
   /**
-   * @param writer The SnakeYAML Dump instance to serialize the pool.
+   * @param writer The SnakeYAML Dump instance to serialize the collection.
    * @return A YAML-Serialized string.
    * @throws NullPointerException If the writer is null.
    */
@@ -234,11 +229,11 @@ public class RosettaPool {
   }
 
   /**
-   * Adds a RosettaLanguage to the Rosetta pool.
+   * Adds a RosettaLanguage to the RosettaCollection.
    *
    * @param lang The RosettaLanguage to register.
    * @throws IllegalArgumentException If the RosettaLanguage's ID marches an existing
-   *     RosettaLanguage object that's already in the pool.
+   *     RosettaLanguage object that's already in the collection.
    */
   public void addLanguage(@NotNull RosettaLanguage lang) {
     String idLower = lang.getID().toLowerCase();
@@ -251,11 +246,11 @@ public class RosettaPool {
   }
 
   /**
-   * Removes a RosettaLanguage from the Rosetta pool.
+   * Removes a RosettaLanguage from the RosettaCollection.
    *
    * @param lang The RosettaLanguage to unregister.
    * @throws IllegalArgumentException If the RosettaLanguage's ID doesn't march an existing
-   *     RosettaLanguage object that's in the pool.
+   *     RosettaLanguage object that's in the collection.
    */
   public void removeLanguage(@NotNull RosettaLanguage lang) {
 
@@ -268,12 +263,12 @@ public class RosettaPool {
   }
 
   /**
-   * Removes a RosettaLanguage from the Rosetta pool.
+   * Removes a RosettaLanguage from the RosettaCollection.
    *
    * @param id The YAML ID of the RosettaLanguage to unregister.
    * @return The unregistered RosettaLanguage.
    * @throws IllegalArgumentException If the RosettaLanguage's ID doesn't march an existing
-   *     RosettaLanguage object that's in the pool.
+   *     RosettaLanguage object that's in the collection.
    */
   @NotNull
   public RosettaLanguage removeLanguage(@NotNull String id) {
@@ -290,8 +285,8 @@ public class RosettaPool {
    * @param id The YAML language ID.
    * @return The registered RosettaLanguage object.
    * @throws NullPointerException If no RosettaLanguage object is registered with the ID. Use {@link
-   *     RosettaPool#hasLanguage(String)} to see if a RosettaLanguage is registered with the ID
-   *     before invoking this method.
+   *     RosettaCollection#hasLanguage(String)} to see if a RosettaLanguage is registered with the
+   *     ID before invoking this method.
    */
   public RosettaLanguage getLanguage(@NotNull String id) {
 
@@ -320,11 +315,11 @@ public class RosettaPool {
   }
 
   /**
-   * Adds a RosettaApplication to the pool.
+   * Adds a RosettaApplication to the collection.
    *
    * @param app The app to register.
    * @throws IllegalArgumentException If the RosettaApplication's ID marches an existing
-   *     RosettaApplication object that's already in the pool.
+   *     RosettaApplication object that's already in the collection.
    */
   public void addApplication(@NotNull RosettaApplication app) {
     String idLower = app.getID().toLowerCase();
@@ -337,11 +332,11 @@ public class RosettaPool {
   }
 
   /**
-   * Removes a RosettaApplication from the Rosetta pool.
+   * Removes a RosettaApplication from the collection.
    *
    * @param app The RosettaApplication to unregister.
    * @throws IllegalArgumentException If the RosettaApplication's ID doesn't march an existing
-   *     RosettaApplication object that's in the pool.
+   *     RosettaApplication object that's in the collection.
    */
   public void removeApplication(@NotNull RosettaApplication app) {
 
@@ -354,12 +349,12 @@ public class RosettaPool {
   }
 
   /**
-   * Removes a RosettaApplication from the Rosetta pool.
+   * Removes a RosettaApplication from the collection.
    *
    * @param id The YAML ID of the RosettaApplication to unregister.
    * @return The unregistered RosettaApplication.
    * @throws IllegalArgumentException If the RosettaApplication's ID doesn't march an existing
-   *     RosettaApplication object that's in the pool.
+   *     RosettaApplication object that's in the collection.
    */
   @NotNull
   public RosettaApplication removeApplication(@NotNull String id) {
@@ -376,8 +371,8 @@ public class RosettaPool {
    * @param id The YAML language ID.
    * @return The registered RosettaApplication object.
    * @throws NullPointerException If no RosettaApplication object is registered with the ID. Use
-   *     {@link RosettaPool#hasLanguage(String)} to see if a RosettaApplication is registered with
-   *     the ID before invoking this method.
+   *     {@link RosettaCollection#hasLanguage(String)} to see if a RosettaApplication is registered
+   *     with the ID before invoking this method.
    */
   public RosettaApplication getApplication(@NotNull String id) {
 
@@ -390,16 +385,16 @@ public class RosettaPool {
   }
 
   /**
-   * @param pool The RosettaApplication to test.
-   * @return True if the RosettaApplication is registered in the pool.
+   * @param app The RosettaApplication to test.
+   * @return True if the RosettaApplication is registered in the app.
    */
-  public boolean hasApplication(@NotNull RosettaApplication pool) {
-    return hasApplication(pool.getID());
+  public boolean hasApplication(@NotNull RosettaApplication app) {
+    return hasApplication(app.getID());
   }
 
   /**
    * @param id The RosettaApplication ID to test.
-   * @return True if a RosettaApplication with the ID is registered in the pool.
+   * @return True if a RosettaApplication with the ID is registered in the collection.
    */
   public boolean hasApplication(@NotNull String id) {
     return applications.containsKey(id.toLowerCase());

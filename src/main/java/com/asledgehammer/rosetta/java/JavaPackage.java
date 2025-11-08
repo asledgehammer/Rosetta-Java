@@ -31,7 +31,7 @@ public class JavaPackage extends RosettaObject
 
   private final JavaPackage parent;
 
-  private final JavaLanguage pool;
+  private final JavaLanguage language;
 
   /** Package-Info documentation notes. */
   private String notes;
@@ -41,10 +41,10 @@ public class JavaPackage extends RosettaObject
    *
    * @param pkg The Java-Reflection package instance.
    */
-  JavaPackage(@NotNull JavaLanguage pool, @Nullable JavaPackage parent, @NotNull Package pkg) {
+  JavaPackage(@NotNull JavaLanguage lang, @Nullable JavaPackage parent, @NotNull Package pkg) {
     super();
 
-    this.pool = pool;
+    this.language = lang;
 
     this.parent = parent;
 
@@ -63,13 +63,13 @@ public class JavaPackage extends RosettaObject
   }
 
   JavaPackage(
-      @NotNull JavaLanguage pool,
+      @NotNull JavaLanguage lang,
       @Nullable JavaPackage parent,
       @NotNull String name,
       @NotNull Map<String, Object> raw) {
     super();
 
-    this.pool = pool;
+    this.language = lang;
     this.parent = parent;
     if (parent != null) {
       this.path = parent.path + '.' + name;
@@ -78,6 +78,7 @@ public class JavaPackage extends RosettaObject
     }
     this.name = name;
 
+    // Attempt to resolve reflection before loading.
     this.reflectedObject = resolve(this.path);
 
     onLoad(raw);
@@ -304,6 +305,11 @@ public class JavaPackage extends RosettaObject
   @Override
   public String getName() {
     return name;
+  }
+
+  @NotNull
+  public String getPath() {
+    return path;
   }
 
   @NotNull

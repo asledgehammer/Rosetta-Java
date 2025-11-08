@@ -97,7 +97,7 @@ public class Rosetta {
 
   /**
    * @param id The YAML ID of the language.
-   * @return A language pool instance.
+   * @return A language instance.
    * @throws NullPointerException If the ID or the type are null.
    * @throws UnsupportedLanguageException If the language ID is unrecognized.
    */

@@ -32,13 +32,15 @@ public class JavaClass extends RosettaObject
   }
 
   JavaClass(@NotNull JavaPackage pkg, @NotNull String name, @NotNull Map<String, Object> raw) {
-    super(raw);
+    super();
 
     this.pkg = pkg;
     this.name = name;
 
-    // TODO: Implement attempt resolution.
-    this.reflectedObject = null;
+    // Attempt to resolve reflection before loading.
+    this.reflectedObject = resolve(pkg.getPath() + "." + name);
+
+    onLoad(raw);
   }
 
   @Override
@@ -88,7 +90,9 @@ public class JavaClass extends RosettaObject
   }
 
   @Override
-  protected void onLoad(@NotNull Map<String, Object> raw) {}
+  protected void onLoad(@NotNull Map<String, Object> raw) {
+    // TODO: Implement.
+  }
 
   @NotNull
   @Override
@@ -140,5 +144,19 @@ public class JavaClass extends RosettaObject
 
   void setReflectedObject(@Nullable Class<?> reflectedObject) {
     this.reflectedObject = reflectedObject;
+  }
+
+  @Nullable
+  public static Class<?> resolve(@NotNull String path) {
+    return resolve(path, ClassLoader.getSystemClassLoader());
+  }
+
+  @Nullable
+  public static Class<?> resolve(@NotNull String path, @NotNull ClassLoader classLoader) {
+    try {
+      return Class.forName(path, false, classLoader);
+    } catch (Exception e) {
+      return null;
+    }
   }
 }
