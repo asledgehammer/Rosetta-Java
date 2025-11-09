@@ -16,12 +16,12 @@ public class JavaReturn extends RosettaObject {
   @Nullable private String notes;
 
   public JavaReturn(@NotNull Type type) {
+    super();
     this.type = TypeReference.of(type);
   }
 
-  @Override
-  public boolean onCompile() {
-    return true;
+  public JavaReturn(@NotNull Map<String, Object> raw) {
+    super(raw);
   }
 
   @Override

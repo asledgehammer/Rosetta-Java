@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
-import java.util.Map;
+import java.util.*;
 
 public class JavaField extends RosettaObject implements NamedEntity, ReflectedReferenceable<Field> {
 
@@ -19,6 +19,8 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
   @Nullable private String deprecated;
 
   private TypeReference type;
+
+  private final List<String> tags = new ArrayList<>();
 
   JavaField(@NotNull Field field) {
     super();
@@ -117,7 +119,12 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
    * @param flag The flag to set.
    */
   public void setDeprecated(boolean flag) {
-    this.deprecated = flag ? "" : null;
+    String deprecated = flag ? "" : null;
+    if (Objects.equals(this.deprecated, deprecated)) {
+      return;
+    }
+    this.deprecated = deprecated;
+    setDirty();
   }
 
   /**
@@ -125,7 +132,91 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
    *     message is provided. If null, the deprecation flag is set to false.
    */
   public void setDeprecated(@Nullable String message) {
+    if (Objects.equals(this.deprecated, message)) {
+      return;
+    }
     this.deprecated = message;
     this.setDirty();
+  }
+
+  @Override
+  public String toString() {
+    return "JavaField \"" + getName() + "\"";
+  }
+
+  /**
+   * @return True if one or more tags are applied.
+   */
+  public boolean hasTags() {
+    return !this.tags.isEmpty();
+  }
+
+  /**
+   * @return A read-only collection of applied tags.
+   */
+  @NotNull
+  public List<String> getTags() {
+    return Collections.unmodifiableList(tags);
+  }
+
+  /**
+   * @param tag The tag to evaluate.
+   * @return True if the tag is registered.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty.
+   */
+  public boolean hasTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    return this.tags.contains(tag);
+  }
+
+  /**
+   * Applies a tag to the object.
+   *
+   * @param tag The tag to apply.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty or already applied.
+   */
+  public void addTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is already applied: " + tag);
+    }
+    this.tags.add(tag);
+    setDirty();
+  }
+
+  /**
+   * Removes a tag from the object.
+   *
+   * @param tag The tag to remove.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty or is not applied.
+   */
+  public void removeTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (!tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is not applied: " + tag);
+    }
+    tags.remove(tag);
+    setDirty();
+  }
+
+  /**
+   * Clears all applied tags.
+   *
+   * @throws RuntimeException If the object has no tags. (Use {@link JavaField#hasTags()})
+   */
+  public void clearTags() {
+    if (tags.isEmpty()) {
+      throw new RuntimeException("No tags are registered.");
+    }
+    tags.clear();
   }
 }

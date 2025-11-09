@@ -131,6 +131,11 @@ public class JavaParameter extends RosettaObject
     setDirty();
   }
 
+  @Override
+  public String toString() {
+    return "JavaParameter \"" + getName() + "\"";
+  }
+
   /**
    * Tests if a Java-parameter's name is valid.
    *

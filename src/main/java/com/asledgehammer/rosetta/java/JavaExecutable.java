@@ -3,15 +3,14 @@ package com.asledgehammer.rosetta.java;
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.RosettaObject;
+import com.asledgehammer.rosetta.exception.ValueTypeException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -21,7 +20,8 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
     implements DirtySupported, NamedEntity, ReflectedReferenceable<E> {
 
   /** Used to validate method names passed from serialized files. */
-  private static final Pattern REGEX_EXECUTABLE_NAME = Pattern.compile("^[a-z][a-zA-Z0-9]*$");
+  private static final Pattern REGEX_EXECUTABLE_NAME =
+      Pattern.compile("^[a-zA-Z_$][a-zA-Z0-9_$]*$");
 
   /** Used to prevent wasteful empty list instantiations in heap memory. */
   private static final List<JavaParameter> DEFAULT_EMPTY_LIST = List.of();
@@ -29,7 +29,7 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
   private final List<JavaParameter> parameters = new ArrayList<>();
 
   private final String signature;
-  private final String name;
+  protected final String name;
 
   @Nullable private String notes;
 
@@ -44,6 +44,8 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
 
   private final E reflectedObject;
 
+  @Nullable private String deprecated;
+
   /**
    * New Constructor for Method and Constructors.
    *
@@ -55,6 +57,49 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
     this.reflectedObject = executable;
     this.name = executable.getName();
     this.signature = createSignature(this);
+  }
+
+  protected JavaExecutable(@NotNull String name, @NotNull Map<String, Object> raw) {
+    this.name = name;
+    this.reflectedObject = null;
+    onLoad(raw);
+    this.signature = createSignature(this);
+  }
+
+  @Override
+  protected void onLoad(@NotNull Map<String, Object> raw) {
+    // TODO: Implement.
+
+    // Load parameters. (If present)
+    if (raw.containsKey("parameters")) {
+      Object oParameters = raw.get("parameters");
+      if (!(oParameters instanceof List)) {
+        throw new ValueTypeException(name, "parameters", oParameters.getClass(), List.class);
+      }
+      List<Object> objects = (List<Object>) oParameters;
+      for (int i = 0; i < objects.size(); i++) {
+        Object oParameter = objects.get(i);
+        if (!(oParameter instanceof Map)) {
+          throw new ValueTypeException(
+              name, "parameters[" + i + "]", oParameter.getClass(), Map.class);
+        }
+        parameters.add(new JavaParameter((Map<String, Object>) oParameter));
+      }
+    }
+
+    if (raw.containsKey("deprecated")) {
+      Object oDeprecated = raw.get("deprecated");
+      if (oDeprecated instanceof String) {
+        this.deprecated = (String) oDeprecated;
+      } else if (oDeprecated instanceof Boolean) {
+        this.deprecated = (boolean) oDeprecated ? "" : null;
+      }
+    }
+
+    // Load notes. (If present)
+    if (raw.containsKey("notes")) {
+      this.notes = raw.get("notes").toString();
+    }
   }
 
   @Override
@@ -164,6 +209,53 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
     this.notes = notes;
 
     setDirty();
+  }
+
+  /**
+   * @return True if the field is flagged as deprecated.
+   */
+  public boolean isDeprecated() {
+    return this.deprecated != null;
+  }
+
+  /**
+   * @return The deprecation message. If empty, the deprecation flag is set and no message is
+   *     provided.
+   * @throws NullPointerException If no deprecated message is set. (Use {@link
+   *     JavaField#isDeprecated()} to check before invoking this method)
+   */
+  @NotNull
+  public String getDeprecatedMessage() {
+    if (this.deprecated == null) {
+      throw new NullPointerException("The field is not deprecated. (No message set)");
+    }
+    return this.deprecated;
+  }
+
+  /**
+   * Sets the deprecation flag of the field without a message.
+   *
+   * @param flag The flag to set.
+   */
+  public void setDeprecated(boolean flag) {
+    String deprecated = flag ? "" : null;
+    if (Objects.equals(this.deprecated, deprecated)) {
+      return;
+    }
+    this.deprecated = deprecated;
+    setDirty();
+  }
+
+  /**
+   * @param message The message to set. If empty, the deprecation flag is set to true, but no
+   *     message is provided. If null, the deprecation flag is set to false.
+   */
+  public void setDeprecated(@Nullable String message) {
+    if (Objects.equals(this.deprecated, message)) {
+      return;
+    }
+    this.deprecated = message;
+    this.setDirty();
   }
 
   /**

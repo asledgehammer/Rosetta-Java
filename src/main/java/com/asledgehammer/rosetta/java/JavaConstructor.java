@@ -12,12 +12,18 @@ public class JavaConstructor extends JavaExecutable<Constructor<?>> {
     super(constructor);
   }
 
-  @Override
-  protected void onLoad(@NotNull Map<String, Object> raw) {}
+  JavaConstructor(@NotNull String name, @NotNull Map<String, Object> raw) {
+    super(name, raw);
+  }
 
   @NotNull
   @Override
   protected Map<String, Object> onSave() {
     return Map.of();
+  }
+
+  @Override
+  public String toString() {
+    return "JavaConstructor \"" + getSignature() + "\"";
   }
 }

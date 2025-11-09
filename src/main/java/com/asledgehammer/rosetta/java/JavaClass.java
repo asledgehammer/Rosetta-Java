@@ -21,6 +21,7 @@ public class JavaClass extends RosettaObject
   private final String name;
 
   @Nullable private String notes;
+  private final List<String> tags = new ArrayList<>();
 
   private final JavaPackage pkg;
 
@@ -204,6 +205,82 @@ public class JavaClass extends RosettaObject
     this.notes = notes;
 
     setDirty();
+  }
+
+  /**
+   * @return True if one or more tags are applied.
+   */
+  public boolean hasTags() {
+    return !this.tags.isEmpty();
+  }
+
+  /**
+   * @return A read-only collection of applied tags.
+   */
+  @NotNull
+  public List<String> getTags() {
+    return Collections.unmodifiableList(tags);
+  }
+
+  /**
+   * @param tag The tag to evaluate.
+   * @return True if the tag is registered.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty.
+   */
+  public boolean hasTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    return this.tags.contains(tag);
+  }
+
+  /**
+   * Applies a tag to the object.
+   *
+   * @param tag The tag to apply.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty or already applied.
+   */
+  public void addTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is already applied: " + tag);
+    }
+    this.tags.add(tag);
+    setDirty();
+  }
+
+  /**
+   * Removes a tag from the object.
+   *
+   * @param tag The tag to remove.
+   * @throws NullPointerException If the tag is null.
+   * @throws IllegalArgumentException If the tag is empty or is not applied.
+   */
+  public void removeTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (!tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is not applied: " + tag);
+    }
+    tags.remove(tag);
+    setDirty();
+  }
+
+  /**
+   * Clears all applied tags.
+   *
+   * @throws RuntimeException If the object has no tags. (Use {@link JavaField#hasTags()})
+   */
+  public void clearTags() {
+    if (tags.isEmpty()) {
+      throw new RuntimeException("No tags are registered.");
+    }
+    tags.clear();
   }
 
   @Nullable
