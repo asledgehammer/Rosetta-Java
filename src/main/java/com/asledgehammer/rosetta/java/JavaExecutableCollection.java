@@ -10,14 +10,15 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class JavaExecutableList<E extends JavaExecutable> implements DirtySupported, NamedEntity {
+public class JavaExecutableCollection<E extends JavaExecutable>
+    implements DirtySupported, NamedEntity {
 
   private final List<E> executables = new ArrayList<>();
-  private boolean dirty;
-
   private final String name;
 
-  JavaExecutableList(@NotNull String name) {
+  private boolean dirty;
+
+  JavaExecutableCollection(@NotNull String name) {
     if (!JavaExecutable.isValidName(name)) {
       throw new IllegalArgumentException(
           "The name is not a valid executable name. (Given: \"" + name + "\")");
@@ -114,16 +115,22 @@ public class JavaExecutableList<E extends JavaExecutable> implements DirtySuppor
 
   @NotNull
   public E getExecutable(@NotNull Executable executable) {
-    if(executables.isEmpty()) {
-      throw new NullPointerException(executable.getClass().getSimpleName() + " isn't registered in group.");
+    if (executables.isEmpty()) {
+      throw new NullPointerException(
+          executable.getClass().getSimpleName() + " isn't registered in group.");
     }
 
     for (E e : executables) {
-      if(e.getReflectedObject().equals(executable)) {
+      if (e.getReflectedObject().equals(executable)) {
         return e;
       }
     }
 
-    throw new NullPointerException(executable.getClass().getSimpleName() + " isn't registered in group.");
+    throw new NullPointerException(
+        executable.getClass().getSimpleName() + " isn't registered in group.");
+  }
+
+  public boolean isEmpty() {
+    return executables.isEmpty();
   }
 }

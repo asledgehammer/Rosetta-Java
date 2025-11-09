@@ -26,6 +26,11 @@ public abstract class RosettaObject implements DirtySupported {
   }
 
   @Override
+  public boolean onCompile() {
+    return true;
+  }
+
+  @Override
   public boolean isDirty() {
     return dirty;
   }

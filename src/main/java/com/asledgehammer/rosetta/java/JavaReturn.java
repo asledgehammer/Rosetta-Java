@@ -1,5 +1,6 @@
 package com.asledgehammer.rosetta.java;
 
+import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +13,7 @@ public class JavaReturn extends RosettaObject {
 
   private TypeReference type;
 
-  private String notes;
+  @Nullable private String notes;
 
   public JavaReturn(@NotNull Type type) {
     this.type = TypeReference.of(type);
@@ -24,7 +25,18 @@ public class JavaReturn extends RosettaObject {
   }
 
   @Override
-  protected void onLoad(@NotNull Map<String, Object> raw) {}
+  protected void onLoad(@NotNull Map<String, Object> raw) {
+    // Resolve the type.
+    if (!raw.containsKey("type")) {
+      throw new MissingKeyException("return[\"type\"]", "type");
+    }
+    this.type = JavaLanguage.resolveType(raw.get("type"));
+
+    // Load notes. (If present)
+    if (raw.containsKey("notes")) {
+      this.notes = raw.get("notes").toString();
+    }
+  }
 
   @NotNull
   @Override
@@ -48,6 +60,15 @@ public class JavaReturn extends RosettaObject {
   }
 
   public void setNotes(@Nullable String notes) {
+    notes = notes == null || notes.isEmpty() ? null : notes;
+
+    // Catch redundant changes to not set dirty flag.
+    if (this.notes == null) {
+      if (notes == null) return;
+    } else if (this.notes.equals(notes)) return;
+
     this.notes = notes;
+
+    setDirty();
   }
 }

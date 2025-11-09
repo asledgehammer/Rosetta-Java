@@ -4,6 +4,7 @@ import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -29,6 +30,8 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
 
   private final String signature;
   private final String name;
+
+  @Nullable private String notes;
 
   /** Defaults to true to compile first-time. */
   private boolean dirty = true;
@@ -143,6 +146,24 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
   @Override
   public E getReflectedObject() {
     return this.reflectedObject;
+  }
+
+  @Nullable
+  public String getNotes() {
+    return notes;
+  }
+
+  public void setNotes(@Nullable String notes) {
+    notes = notes == null || notes.isEmpty() ? null : notes;
+
+    // Catch redundant changes to not set dirty flag.
+    if (this.notes == null) {
+      if (notes == null) return;
+    } else if (this.notes.equals(notes)) return;
+
+    this.notes = notes;
+
+    setDirty();
   }
 
   /**

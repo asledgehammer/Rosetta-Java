@@ -1,6 +1,7 @@
 package com.asledgehammer.rosetta.java;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class JavaMethod extends JavaExecutable<Method> {
 
   @Override
   public boolean onCompile() {
+
     // Invoke super-compile code and then handle return property.
     if (!super.onCompile()) {
       return false;

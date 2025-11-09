@@ -44,12 +44,8 @@ public class JavaPackage extends RosettaObject
   JavaPackage(@NotNull JavaLanguage lang, @Nullable JavaPackage parent, @NotNull Package pkg) {
     super();
 
-    System.out.println("new JavaPackage(parent = " + parent + ", pkg = " + pkg + ")");
-
     this.language = lang;
-
     this.parent = parent;
-
     this.reflectedObject = pkg;
 
     // We already know that this is a valid package-name.
@@ -60,8 +56,6 @@ public class JavaPackage extends RosettaObject
     } else {
       this.name = this.path;
     }
-
-    // TODO: Implement discovery.
   }
 
   /**
@@ -94,8 +88,6 @@ public class JavaPackage extends RosettaObject
       @NotNull String name,
       @NotNull Map<String, Object> raw) {
     super();
-
-    System.out.println("new JavaPackage(name = " + name + ", raw = " + raw + ")");
 
     this.language = lang;
     this.parent = parent;
@@ -316,7 +308,16 @@ public class JavaPackage extends RosettaObject
   }
 
   public void setNotes(@Nullable String notes) {
+    notes = notes == null || notes.isEmpty() ? null : notes;
+
+    // Catch redundant changes to not set dirty flag.
+    if (this.notes == null) {
+      if (notes == null) return;
+    } else if (this.notes.equals(notes)) return;
+
     this.notes = notes;
+
+    setDirty();
   }
 
   @NotNull

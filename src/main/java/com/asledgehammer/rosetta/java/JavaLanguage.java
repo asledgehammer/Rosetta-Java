@@ -1,7 +1,11 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.RosettaLanguage;
+import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.RosettaException;
+import com.asledgehammer.rosetta.exception.TypeException;
+import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -13,6 +17,52 @@ public class JavaLanguage implements RosettaLanguage {
   final Map<String, JavaPackage> packages = new HashMap<>();
 
   public JavaLanguage() {}
+
+  /**
+   * Resolves a TypeReference from Rosetta-defined data.
+   *
+   * @param oType Either a String or a Map.
+   * @return A built type-reference.
+   */
+  public static TypeReference resolveType(@NotNull Object oType) {
+
+    if (oType instanceof String) {
+      return TypeReference.of((String) oType);
+    } else if (!(oType instanceof Map)) {
+      throw new TypeException("type", oType.getClass(), String.class, Map.class);
+    }
+
+    Map<String, Object> map = (Map<String, Object>) oType;
+
+    // Retrieve the base string.
+    Object oBase = map.get("base");
+    if (oBase == null) {
+      throw new MissingKeyException("type", "base");
+    } else if (!(oBase instanceof String)) {
+      throw new ValueTypeException("type", "base", oBase.getClass(), String.class);
+    }
+
+    String full = (String) oBase;
+    // Retrieve any parameters defined.
+    if (map.containsKey("parameters")) {
+      Object oParameters = map.get("parameters");
+      if (!(oParameters instanceof List)) {
+        throw new ValueTypeException("type", "parameters", oParameters.getClass(), List.class);
+      }
+
+      StringBuilder sub = new StringBuilder();
+      for (Object oParameter : (List) oParameters) {
+        if (sub.isEmpty()) {
+          sub.append(resolveType(oParameter).getBase());
+        } else {
+          sub.append(", ").append(resolveType(oParameter).getBase());
+        }
+      }
+      full += "<" + sub + ">";
+    }
+
+    return TypeReference.of(full);
+  }
 
   @NotNull
   public JavaPackage of(@NotNull Package pkg) {
