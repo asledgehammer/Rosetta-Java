@@ -14,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.*;
 import java.util.*;
 
+import static java.lang.Package.getPackages;
+
 public class JavaLanguage implements RosettaLanguage {
 
   final Map<String, JavaClass> classes = new HashMap<>();
@@ -231,6 +233,10 @@ public class JavaLanguage implements RosettaLanguage {
 
   private JavaPackage ofInternalPackage(@NotNull String path) {
 
+    if (this.packages.containsKey(path)) {
+      return this.packages.get(path);
+    }
+
     JavaPackage parent = null;
     String name;
     if (path.contains(".")) {
@@ -261,7 +267,9 @@ public class JavaLanguage implements RosettaLanguage {
       name = path;
     }
 
-    return new JavaPackage(this, parent, name);
+    JavaPackage javaPackage = new JavaPackage(this, parent, name);
+    this.packages.put(name, javaPackage);
+    return javaPackage;
   }
 
   @NotNull
@@ -312,6 +320,25 @@ public class JavaLanguage implements RosettaLanguage {
     }
   }
 
+  private void onSavePackageInternal(
+      @NotNull Map<String, Object> raw, @NotNull JavaPackage javaPackage) {
+
+    // Only save packages that contains contents.
+    if (javaPackage.canSave()) {
+      raw.put(javaPackage.getPath(), javaPackage.onSave(false));
+    }
+
+    // Use this to flatten packages to prevent unnecessary nesting.
+    if (javaPackage.hasPackages()) {
+      Map<String, JavaPackage> packages = javaPackage.getPackages();
+      List<String> keys = new ArrayList<>(packages.keySet());
+      keys.sort(Comparator.naturalOrder());
+      for (String key : keys) {
+        onSavePackageInternal(raw, packages.get(key));
+      }
+    }
+  }
+
   @NotNull
   @Override
   public Map<String, Object> onSave() {
@@ -325,11 +352,15 @@ public class JavaLanguage implements RosettaLanguage {
       keys.sort(Comparator.naturalOrder());
 
       for (String key : keys) {
-        JavaPackage javaPackage = this.packages.get(key);
-        packages.put(key, javaPackage.onSave());
+        final JavaPackage javaPackage = this.packages.get(key);
+        if (!javaPackage.hasParent()) {
+          onSavePackageInternal(packages, javaPackage);
+        }
       }
 
-      raw.put("packages", packages);
+      if (!packages.isEmpty()) {
+        raw.put("packages", packages);
+      }
     }
 
     return raw;

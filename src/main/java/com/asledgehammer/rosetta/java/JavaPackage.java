@@ -56,6 +56,9 @@ public class JavaPackage extends RosettaObject
     } else {
       this.name = this.path;
     }
+    if (this.parent != null) {
+      this.parent.addPackage(this);
+    }
   }
 
   /**
@@ -73,12 +76,13 @@ public class JavaPackage extends RosettaObject
 
     this.language = lang;
     this.parent = parent;
+    this.name = name;
     if (parent != null) {
       this.path = parent.path + '.' + name;
+      this.parent.addPackage(this);
     } else {
       this.path = name;
     }
-    this.name = name;
     this.target = null;
   }
 
@@ -91,12 +95,13 @@ public class JavaPackage extends RosettaObject
 
     this.language = lang;
     this.parent = parent;
+    this.name = name;
     if (parent != null) {
       this.path = parent.path + '.' + name;
+      this.parent.addPackage(this);
     } else {
       this.path = name;
     }
-    this.name = name;
 
     // Attempt to resolve reflection before loading.
     this.target = resolve(this.path);
@@ -143,7 +148,7 @@ public class JavaPackage extends RosettaObject
   }
 
   @NotNull
-  protected Map<String, Object> onSave() {
+  protected Map<String, Object> onSave(boolean deep) {
     final Map<String, Object> raw = new HashMap<>();
 
     if (hasNotes()) {
@@ -154,7 +159,7 @@ public class JavaPackage extends RosettaObject
       raw.put("tags", getTags());
     }
 
-    if (hasPackages()) {
+    if (deep && hasPackages()) {
       final Map<String, Object> packages = new HashMap<>();
 
       // Go through each package alphanumerically.
@@ -163,7 +168,7 @@ public class JavaPackage extends RosettaObject
 
       for (String key : keys) {
         JavaPackage javaPackage = this.packages.get(key);
-        packages.put(key, javaPackage.onSave());
+        packages.put(key, javaPackage.onSave(deep));
       }
 
       raw.put("packages", packages);
@@ -191,7 +196,7 @@ public class JavaPackage extends RosettaObject
     return !this.classes.isEmpty();
   }
 
-  private boolean hasPackages() {
+  boolean hasPackages() {
     return !this.packages.isEmpty();
   }
 
@@ -347,6 +352,10 @@ public class JavaPackage extends RosettaObject
           "The package \"" + this.name + "\" doesn't contain class: \"" + clazzName + "\"");
     }
     return this.classes.remove(clazzName);
+  }
+
+  public boolean canSave() {
+    return hasClasses() || hasTags() || hasNotes();
   }
 
   @Override
@@ -527,5 +536,9 @@ public class JavaPackage extends RosettaObject
   @Nullable
   public static Package resolve(@NotNull String path, @NotNull ClassLoader classLoader) {
     return classLoader.getDefinedPackage(path);
+  }
+
+  public boolean hasParent() {
+    return this.parent != null;
   }
 }
