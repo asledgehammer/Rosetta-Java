@@ -1,12 +1,13 @@
 package com.asledgehammer.rosetta;
 
 import com.asledgehammer.rosetta.exception.RosettaException;
+import java.io.*;
+import java.util.*;
+
+import com.asledgehammer.rosetta.exception.ValueTypeException;
 import org.jetbrains.annotations.NotNull;
 import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.Load;
-
-import java.io.*;
-import java.util.*;
 
 /**
  * RosettaCollection store a group or collection of Rosetta data.
@@ -23,6 +24,9 @@ public class RosettaCollection {
 
   private final Map<String, RosettaLanguage> languages = new HashMap<>();
   private final Map<String, RosettaApplication> applications = new HashMap<>();
+
+  private String locale = "EN_US";
+  private final String version = "1.2";
 
   public RosettaCollection() {}
 
@@ -118,16 +122,33 @@ public class RosettaCollection {
       throw new RosettaException("Unknown version: " + version);
     }
 
-    if (!data.containsKey("languages")) {
-      // No definitions? Return.
-      return;
+    // If a locale is defined, apply it.
+    if (data.containsKey("locale")) {
+      Object oLocale = data.get("locale");
+      if (!(oLocale instanceof String)) {
+        throw new ValueTypeException("[ROOT]", "locale", oLocale.getClass(), String.class);
+      }
+      this.locale = (String) oLocale;
+    } else {
+      // (Default is `EN_US`)
+      this.locale = "EN_US";
     }
 
-    final Object oLanguages = data.get("languages");
-    if (!(oLanguages instanceof Map)) {
-      throw new RosettaException("The property \"languages\" is not a dictionary.");
+    if (data.containsKey("languages")) {
+      final Object oLanguages = data.get("languages");
+      if (!(oLanguages instanceof Map)) {
+        throw new ValueTypeException("<ROOT>", "languages", oLanguages.getClass(), Map.class);
+      }
+      onLoadLanguages((Map<String, Object>) oLanguages);
     }
-    onLoadLanguages((Map<String, Object>) oLanguages);
+
+    if (data.containsKey("applications")) {
+      final Object oApplications = data.get("applications");
+      if (!(oApplications instanceof Map)) {
+        throw new ValueTypeException("<ROOT>", "applications", oApplications.getClass(), Map.class);
+      }
+      onLoadApplications((Map<String, Object>) oApplications);
+    }
   }
 
   /**
@@ -224,8 +245,41 @@ public class RosettaCollection {
 
   @NotNull
   public Map<String, Object> onSave() {
-    // TODO: Implement.
-    return Map.of();
+
+    final Map<String, Object> raw = new HashMap<>();
+
+    raw.put("version", version);
+    raw.put("locale", locale);
+
+    if (hasLanguages()) {
+      final Map<String, Object> languages = new HashMap<>();
+      List<String> keys = new ArrayList<>(this.languages.keySet());
+      keys.sort(Comparator.naturalOrder());
+      for (String key : keys) {
+        languages.put(key, this.languages.get(key).onSave());
+      }
+      raw.put("languages", languages);
+    }
+
+    if (hasApplications()) {
+      final Map<String, Object> applications = new HashMap<>();
+      List<String> keys = new ArrayList<>(this.applications.keySet());
+      keys.sort(Comparator.naturalOrder());
+      for (String key : keys) {
+        applications.put(key, this.applications.get(key).onSave());
+      }
+      raw.put("applications", applications);
+    }
+
+    return raw;
+  }
+
+  private boolean hasLanguages() {
+    return !this.languages.isEmpty();
+  }
+
+  private boolean hasApplications() {
+    return !this.applications.isEmpty();
   }
 
   /**
@@ -398,5 +452,19 @@ public class RosettaCollection {
    */
   public boolean hasApplication(@NotNull String id) {
     return applications.containsKey(id.toLowerCase());
+  }
+
+  @NotNull
+  public String getVersion() {
+    return this.version;
+  }
+
+  @NotNull
+  public String getLocale() {
+    return this.locale;
+  }
+
+  public void setLocale(@NotNull String locale) {
+    this.locale = locale;
   }
 }

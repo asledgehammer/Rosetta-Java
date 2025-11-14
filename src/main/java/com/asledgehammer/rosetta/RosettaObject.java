@@ -52,9 +52,9 @@ public abstract class RosettaObject implements DirtySupported {
    */
   protected abstract void onLoad(@NotNull Map<String, Object> raw);
 
-  /**
-   * @return The serialized map of the object.
-   */
-  @NotNull
-  protected abstract Map<String, Object> onSave();
+//  /**
+//   * @return The serialized map of the object.
+//   */
+//  @NotNull
+//  protected abstract Map<String, Object> onSave();
 }

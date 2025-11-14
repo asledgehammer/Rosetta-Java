@@ -5,6 +5,7 @@ import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.RosettaObject;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,7 +28,7 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
   private static final List<JavaParameter> DEFAULT_EMPTY_LIST = List.of();
 
   private final List<JavaParameter> parameters = new ArrayList<>();
-  private final List<JavaGenericParameter> typeParameters = new ArrayList<>();
+  private final List<JavaTypeParameter> typeParameters = new ArrayList<>();
 
   private final String signature;
   protected final String name;
@@ -64,7 +65,7 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
     // Register any generic parameter variables.
     TypeVariable<?>[] typeVariables = executable.getTypeParameters();
     for (TypeVariable<?> typeVariable : typeVariables) {
-      this.typeParameters.add(new JavaGenericParameter(TypeReference.of(typeVariable)));
+      this.typeParameters.add(new JavaTypeParameter(TypeReference.of(typeVariable)));
     }
 
     // If parameters are provided, add them.
@@ -121,16 +122,29 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
   }
 
   @NotNull
-  @Override
-  protected Map<String, Object> onSave() {
+  protected Map<String, Object> onSave(@NotNull ClassReference reference) {
     Map<String, Object> raw = new HashMap<>();
 
-    // TODO: Implement.
+    final Class<?> deCl = getReflectionTarget().getDeclaringClass();
+
+    if (hasNotes()) {
+      raw.put("notes", getNotes());
+    }
+
     if (hasTypeParameters()) {
-      List<Object> typeParameters = new ArrayList<>();
-      for (JavaGenericParameter parameter : this.typeParameters) {
-        typeParameters.add(parameter.onSave());
+      final List<Map<String, Object>> typeParameters = new ArrayList<>();
+      for (JavaTypeParameter parameter : this.typeParameters) {
+        typeParameters.add(parameter.onSave(reference, deCl));
       }
+      raw.put("type_parameters", typeParameters);
+    }
+
+    if (hasParameters()) {
+      final List<Map<String, Object>> parameters = new ArrayList<>();
+      for (JavaParameter javaParameter : this.parameters) {
+        parameters.add(javaParameter.onSave(reference, deCl));
+      }
+      raw.put("parameters", parameters);
     }
 
     return raw;

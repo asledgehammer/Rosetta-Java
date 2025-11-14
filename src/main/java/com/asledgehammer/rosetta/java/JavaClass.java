@@ -4,12 +4,14 @@ import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.RosettaObject;
 import com.asledgehammer.rosetta.Taggable;
+import com.asledgehammer.rosetta.exception.MissingKeyException;
+import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
+import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class JavaClass extends RosettaObject
@@ -17,13 +19,23 @@ public class JavaClass extends RosettaObject
 
   private final Map<String, JavaField> fields = new HashMap<>();
   private final Map<String, JavaExecutableCollection<JavaMethod>> methods = new HashMap<>();
-  private final List<JavaGenericParameter> parameters = new ArrayList<>();
+  private final List<JavaTypeParameter> typeParameters = new ArrayList<>();
   private final List<String> tags = new ArrayList<>();
   private final JavaExecutableCollection<JavaConstructor> constructors;
+  private ClassReference targetReference;
   private Class<?> target;
   private final JavaPackage pkg;
   private String notes;
   private final String name;
+
+  private String deprecated;
+
+  private TypeReference extendz;
+  private List<TypeReference> implementz = new ArrayList<>();
+
+  private JavaScope scope;
+  private boolean isStatic;
+  private boolean isFinal;
 
   JavaClass(@NotNull JavaPackage pkg, @NotNull Class<?> clazz) {
     super();
@@ -32,9 +44,7 @@ public class JavaClass extends RosettaObject
     this.name = clazz.getSimpleName();
     this.constructors = new JavaExecutableCollection<>(this.name);
 
-    this.target = clazz;
-
-    discover();
+    discover(clazz);
   }
 
   JavaClass(@NotNull JavaPackage pkg, @NotNull String name, @NotNull Map<String, Object> raw) {
@@ -46,12 +56,34 @@ public class JavaClass extends RosettaObject
 
     // Attempt to resolve reflection before loading.
     this.target = resolve(pkg.getPath() + "." + name);
+    if (this.target != null) {
+      this.targetReference = ClassReference.of(this.target);
+    } else {
+      this.targetReference = null;
+    }
 
     onLoad(raw);
   }
 
-  private void discover() {
-    Class<?> clazz = this.target;
+  private void discover(Class<?> clazz) {
+
+    this.target = clazz;
+    this.targetReference = ClassReference.of(clazz);
+
+    int modifiers = clazz.getModifiers();
+
+    // Figure out the modifiers for the class.
+    this.scope = JavaLanguage.getScope(clazz);
+    this.isStatic = JavaLanguage.isStatic(clazz);
+    this.isFinal = JavaLanguage.isFinal(clazz);
+
+    // Grab the superclass type.
+    this.extendz = TypeReference.of(clazz.getGenericSuperclass());
+
+    // Grab any superinterface types.
+    for (Type implement : clazz.getGenericInterfaces()) {
+      implementz.add(TypeReference.of(implement));
+    }
 
     // Discover fields.
     for (Field field : clazz.getDeclaredFields()) {
@@ -123,14 +155,252 @@ public class JavaClass extends RosettaObject
   }
 
   @Override
-  protected void onLoad(@NotNull Map<String, Object> raw) {
-    // TODO: Implement.
+  protected void onLoad(@NotNull final Map<String, Object> raw) {
+
+    // If the class is defined as static.
+    if (raw.containsKey("static")) {
+      Object oStatic = raw.get("static");
+      if (!(oStatic instanceof Boolean)) {
+        throw new ValueTypeException("class", "static", oStatic.getClass(), Boolean.class);
+      }
+      this.isStatic = (boolean) (Boolean) oStatic;
+    } else {
+      this.isStatic = false;
+    }
+
+    // If the class is defined as final.
+    if (raw.containsKey("final")) {
+      Object oFinal = raw.get("final");
+      if (!(oFinal instanceof Boolean)) {
+        throw new ValueTypeException("class", "final", oFinal.getClass(), Boolean.class);
+      }
+      this.isFinal = (boolean) (Boolean) oFinal;
+    } else {
+      this.isFinal = false;
+    }
+
+    // If the class extends another, resolve the type.
+    if (raw.containsKey("extends")) {
+      this.extendz = JavaLanguage.resolveType(raw.get("extends"));
+    }
+
+    // Any implementation types are resolved.
+    if (raw.containsKey("implements")) {
+      Object oImplements = raw.get("implements");
+      if (!(oImplements instanceof List)) {
+        throw new ValueTypeException("class", "implements", oImplements.getClass(), List.class);
+      }
+      for (Object oImplement : (List<Object>) oImplements) {
+        implementz.add(JavaLanguage.resolveType(oImplement));
+      }
+    }
+
+    // If the object is deprecated and optionally has a description for it.
+    if (raw.containsKey("deprecated")) {
+      Object oDeprecated = raw.get("deprecated");
+      String deprecated;
+      if (oDeprecated instanceof String) {
+        deprecated = (String) oDeprecated;
+      } else if (oDeprecated instanceof Boolean) {
+        deprecated = (boolean) (Boolean) oDeprecated ? "" : null;
+      } else {
+        throw new ValueTypeException(
+            "class", "deprecated", oDeprecated.getClass(), String.class, Boolean.class);
+      }
+      this.deprecated = deprecated;
+    }
+
+    // Load notes. (If defined)
+    if (raw.containsKey("notes")) {
+      Object oNotes = raw.get("notes");
+      if (!(oNotes instanceof String)) {
+        throw new ValueTypeException("class", "notes", oNotes.getClass(), String.class);
+      }
+    }
+
+    // Load any type_parameters. (If defined)
+    if (raw.containsKey("type_parameters")) {
+      Object oTypeParameters = raw.get("type_parameters");
+      if (!(oTypeParameters instanceof List)) {
+        throw new ValueTypeException(
+            "class", "type_parameters", oTypeParameters.getClass(), List.class);
+      }
+
+      for (Object oTypeParameter : (List<Object>) oTypeParameters) {
+        JavaTypeParameter javaTypeParameter =
+            new JavaTypeParameter(JavaLanguage.resolveType(oTypeParameter));
+        this.typeParameters.add(javaTypeParameter);
+      }
+    }
+
+    // Load any fields. (If defined)
+    if (raw.containsKey("fields")) {
+      Object oFields = raw.get("fields");
+      if (!(oFields instanceof Map)) {
+        throw new ValueTypeException("class", "fields", oFields.getClass(), Map.class);
+      }
+      Map<String, Object> fields = (Map<String, Object>) oFields;
+      //      List<String> keys = new ArrayList<>(fields.keySet());
+      //      keys.sort(Comparator.naturalOrder());
+
+      for (String key : fields.keySet()) {
+        Object oField = fields.get(key);
+        if (!(oField instanceof Map)) {
+          throw new ValueTypeException("class.fields", key, oField.getClass(), Map.class);
+        }
+        fields.put(key, new JavaField(key, (Map<String, Object>) oField));
+      }
+    }
+
+    // Load any constructors. (If defined)
+    if (raw.containsKey("constructors")) {
+      Object oConstructors = raw.get("constructors");
+      if (!(oConstructors instanceof List)) {
+        throw new ValueTypeException("class", "constructors", oConstructors.getClass(), List.class);
+      }
+      List<Object> objects = (List<Object>) oConstructors;
+      for (int i = 0; i < objects.size(); i++) {
+        Object oConstructor = objects.get(i);
+        if (!(oConstructor instanceof Map)) {
+          throw new ValueTypeException(
+              "class", "constructors[" + i + "]", oConstructor.getClass(), Map.class);
+        }
+        constructors.addExecutable(
+            new JavaConstructor(this.name, (Map<String, Object>) oConstructor));
+      }
+    }
+
+    // Load any methods. (If defined)
+    if (raw.containsKey("methods")) {
+      Object oMethods = raw.get("methods");
+      if (!(oMethods instanceof List)) {
+        throw new ValueTypeException("class", "methods", oMethods.getClass(), List.class);
+      }
+      List<Object> objects = (List<Object>) oMethods;
+      for (int i = 0; i < objects.size(); i++) {
+        Object oMethod = objects.get(i);
+        if (!(oMethod instanceof Map)) {
+          throw new ValueTypeException(
+              "class", "methods[" + i + "]", oMethod.getClass(), Map.class);
+        }
+        Map<String, Object> method = (Map<String, Object>) oMethod;
+        if (!method.containsKey("name")) {
+          throw new MissingKeyException("class.methods[" + i + "]", "name");
+        }
+        Object oName = method.get("name");
+        if (!(oName instanceof String methodName)) {
+          throw new ValueTypeException(
+              "class.methods[" + i + "]", "name", oName.getClass(), String.class);
+        }
+        JavaExecutableCollection<JavaMethod> methods =
+            this.methods.computeIfAbsent(methodName, JavaExecutableCollection::new);
+        methods.addExecutable(new JavaMethod(methodName, raw));
+      }
+    }
   }
 
   @NotNull
-  @Override
   protected Map<String, Object> onSave() {
-    return Map.of();
+
+    final Map<String, Object> raw = new HashMap<>();
+
+    if (isStatic) {
+      raw.put("static", true);
+    }
+
+    if (isFinal) {
+      raw.put("final", true);
+    }
+
+    if (!typeParameters.isEmpty()) {
+      final List<Object> listTypeParameters = new ArrayList<>();
+      for (JavaTypeParameter typeParameter : typeParameters) {
+        listTypeParameters.add(typeParameter.onSave(targetReference, target));
+      }
+      raw.put("type_parameters", listTypeParameters);
+    }
+
+    // Serialize the super-class type.
+    if (this.extendz != null) {
+      raw.put("extends", JavaLanguage.serializeType(this.extendz, targetReference, target));
+    }
+
+    // Serialize any super-interface type(s).
+    if (this.implementz != null && !this.implementz.isEmpty()) {
+      final List<Object> implementz = new ArrayList<>();
+      for (TypeReference implement : this.implementz) {
+        implementz.add(JavaLanguage.serializeType(implement, targetReference, target));
+      }
+      raw.put("implements", implementz);
+    }
+
+    if (deprecated != null) {
+      if (deprecated.isEmpty()) {
+        // Non-descriptive.
+        raw.put("deprecated", true);
+      } else {
+        // Descriptive.
+        raw.put("deprecated", deprecated);
+      }
+    }
+
+    // If the class has documentation notes, save them.
+    if (notes != null && !notes.isEmpty()) {
+      raw.put("notes", notes);
+    }
+
+    // If tags are assigned to the class, save them.
+    if (hasTags()) {
+      raw.put("tags", getTags());
+    }
+
+    // If the class has fields, save them.
+    if (hasFields()) {
+      final Map<String, Object> fields = new HashMap<>();
+      final List<String> keys = new ArrayList<>(this.fields.keySet());
+      keys.sort(Comparator.naturalOrder());
+      for (String key : keys) {
+        JavaField javaField = this.fields.get(key);
+        fields.put(key, javaField.onSave(this.targetReference));
+      }
+      raw.put("fields", fields);
+    }
+
+    // If the class has constructors, save them.
+    if (hasConstructors()) {
+      final List<Map<String, Object>> constructors = new ArrayList<>();
+      final List<JavaConstructor> javaConstructors =
+          new ArrayList<>(this.constructors.getExecutables());
+      javaConstructors.sort(Comparator.comparing(JavaExecutable::getSignature));
+      for (JavaConstructor constructor : javaConstructors) {
+        constructors.add(constructor.onSave(targetReference));
+      }
+      raw.put("constructors", constructors);
+    }
+
+    if (hasMethods()) {
+      final List<Map<String, Object>> methods = new ArrayList<>();
+
+      // Go through each method alphanumerically.
+      List<String> keys = new ArrayList<>(this.methods.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+
+        // Grab each group and sort them by signatures for clean exports.
+        final JavaExecutableCollection<JavaMethod> methodGroup = this.methods.get(key);
+        final List<JavaMethod> javaMethods = new ArrayList<>(methodGroup.getExecutables());
+        if (javaMethods.size() > 1) {
+          javaMethods.sort(Comparator.comparing(JavaExecutable::getSignature));
+        }
+        for (JavaMethod method : javaMethods) {
+          methods.add(method.onSave(targetReference));
+        }
+      }
+      raw.put("methods", methods);
+    }
+
+    return raw;
   }
 
   @Override
@@ -145,9 +415,9 @@ public class JavaClass extends RosettaObject
   }
 
   @NotNull
-  public List<JavaGenericParameter> getParameters() {
+  public List<JavaTypeParameter> getTypeParameters() {
     if (isDirty()) compile();
-    return this.parameters;
+    return this.typeParameters;
   }
 
   @NotNull
@@ -156,16 +426,28 @@ public class JavaClass extends RosettaObject
     return this.constructors;
   }
 
+  public boolean hasConstructors() {
+    return !this.constructors.isEmpty();
+  }
+
   @NotNull
   public Map<String, JavaExecutableCollection<JavaMethod>> getMethods() {
     if (isDirty()) compile();
     return this.methods;
   }
 
+  public boolean hasMethods() {
+    return !this.methods.isEmpty();
+  }
+
   @NotNull
   public Map<String, JavaField> getFields() {
     if (isDirty()) compile();
     return this.fields;
+  }
+
+  public boolean hasFields() {
+    return !this.fields.isEmpty();
   }
 
   @NotNull

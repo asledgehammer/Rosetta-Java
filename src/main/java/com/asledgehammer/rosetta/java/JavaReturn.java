@@ -3,12 +3,14 @@ package com.asledgehammer.rosetta.java;
 import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 
 public class JavaReturn extends RosettaObject implements Notable {
@@ -55,9 +57,10 @@ public class JavaReturn extends RosettaObject implements Notable {
   }
 
   @NotNull
-  @Override
-  protected Map<String, Object> onSave() {
-    return Map.of();
+  protected Map<String, Object> onSave(@NotNull ClassReference reference, @NotNull Class<?> deCl) {
+    final Map<String, Object> raw = new HashMap<>();
+    // TODO: Implement.
+    return raw;
   }
 
   @NotNull

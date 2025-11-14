@@ -4,6 +4,7 @@ import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
@@ -64,9 +65,10 @@ public class JavaField extends RosettaObject
   }
 
   @NotNull
-  @Override
-  protected Map<String, Object> onSave() {
-    return Map.of();
+  protected Map<String, Object> onSave(@NotNull ClassReference reference) {
+    // TODO: Implement.
+    final Map<String, Object> raw = new HashMap<>();
+    return raw;
   }
 
   @NotNull

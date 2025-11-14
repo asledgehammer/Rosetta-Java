@@ -3,6 +3,7 @@ package com.asledgehammer.rosetta.java;
 import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.NamedEntity;
 import com.asledgehammer.rosetta.RosettaObject;
@@ -85,14 +86,14 @@ public class JavaParameter extends RosettaObject
   }
 
   @NotNull
-  @Override
-  protected Map<String, Object> onSave() {
+  protected Map<String, Object> onSave(@NotNull ClassReference reference, @NotNull Class<?> deCl) {
     Map<String, Object> raw = new HashMap<>();
     raw.put("name", getName());
     if (hasNotes()) {
       raw.put("notes", getNotes());
     }
     raw.put("nullable", isNullable());
+    raw.put("type", this.type.compile(reference, deCl));
     return raw;
   }
 

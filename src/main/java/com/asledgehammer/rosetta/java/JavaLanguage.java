@@ -5,12 +5,13 @@ import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.RosettaException;
 import com.asledgehammer.rosetta.exception.TypeException;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import com.asledgehammer.rosetta.java.reference.SimpleTypeReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.java.reference.UnionTypeReference;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class JavaLanguage implements RosettaLanguage {
@@ -72,18 +73,19 @@ public class JavaLanguage implements RosettaLanguage {
    *     SimpleTypeReference#hasSubTypes()} being true} or a {@link Map}.
    */
   @NotNull
-  public static Object serializeType(@NotNull TypeReference type) {
+  public static Object serializeType(
+      @NotNull TypeReference type, @NotNull ClassReference reference, @NotNull Class<?> deCl) {
     Map<String, Object> raw;
     if (type instanceof SimpleTypeReference simple) {
       if (!simple.hasSubTypes()) {
-        return simple.compile();
+        return simple.compile(reference, deCl);
       }
       raw = new HashMap<>();
       raw.put("full", simple.compile());
       raw.put("base", simple.getBase());
       List<Object> parameters = new ArrayList<>();
       for (TypeReference subType : simple.getSubTypes()) {
-        parameters.add(serializeType(subType));
+        parameters.add(serializeType(subType, reference, deCl));
       }
       raw.put("parameters", parameters);
     } else {
@@ -95,11 +97,96 @@ public class JavaLanguage implements RosettaLanguage {
       raw.put("bounds_type", union.isExtendsOrSuper() ? "extends" : "super");
       List<Object> bounds = new ArrayList<>();
       for (TypeReference bound : union.getBounds()) {
-        bounds.add(serializeType(bound));
+        bounds.add(serializeType(bound, reference, deCl));
       }
       raw.put("bounds", bounds);
     }
     return raw;
+  }
+
+  @NotNull
+  public static JavaScope getScope(@NotNull Class<?> clazz) {
+    return getScope(clazz.getModifiers());
+  }
+
+  @NotNull
+  public static JavaScope getScope(@NotNull Constructor<?> constructor) {
+    return getScope(constructor.getModifiers());
+  }
+
+  @NotNull
+  public static JavaScope getScope(@NotNull Method method) {
+    return getScope(method.getModifiers());
+  }
+
+  @NotNull
+  public static JavaScope getScope(@NotNull Parameter parameter) {
+    return getScope(parameter.getModifiers());
+  }
+
+  @NotNull
+  public static JavaScope getScope(@NotNull Field field) {
+    return getScope(field.getModifiers());
+  }
+
+  /**
+   * Resolves the scope of a Java reflection target.
+   *
+   * @param modifiers {@link Class#getModifiers()}, {@link Executable#getModifiers()}, {@link
+   *     Parameter#getModifiers()}, or {@link Field#getModifiers()}.
+   * @return The scope of the Java reflection target.
+   */
+  @NotNull
+  private static JavaScope getScope(int modifiers) {
+    if (Modifier.isPublic(modifiers)) {
+      return JavaScope.PUBLIC;
+    } else if (Modifier.isProtected(modifiers)) {
+      return JavaScope.PROTECTED;
+    } else if (Modifier.isPrivate(modifiers)) {
+      return JavaScope.PRIVATE;
+    } else {
+      return JavaScope.PACKAGE;
+    }
+  }
+
+  public static boolean isStatic(@NotNull Class<?> clazz) {
+    return Modifier.isStatic(clazz.getModifiers());
+  }
+
+  public static boolean isStatic(@NotNull Method method) {
+    return Modifier.isStatic(method.getModifiers());
+  }
+
+  public static boolean isStatic(@NotNull Field field) {
+    return Modifier.isStatic(field.getModifiers());
+  }
+
+  public static boolean isFinal(@NotNull Method method) {
+    return Modifier.isFinal(method.getModifiers());
+  }
+
+  public static boolean isFinal(@NotNull Parameter parameter) {
+    return Modifier.isFinal(parameter.getModifiers());
+  }
+
+  public static boolean isFinal(@NotNull Class<?> clazz) {
+    return Modifier.isFinal(clazz.getModifiers());
+  }
+
+  public static boolean isFinal(@NotNull Field field) {
+    return Modifier.isFinal(field.getModifiers());
+  }
+
+  public static boolean isTransient(@NotNull Field field) {
+    return Modifier.isTransient(field.getModifiers());
+  }
+
+  public static boolean isVolatile(@NotNull Field field) {
+    return Modifier.isVolatile(field.getModifiers());
+  }
+
+  public static boolean isNative(@NotNull Method method) {
+    return Modifier.isNative(method.getModifiers());
   }
 
   @NotNull
@@ -187,6 +274,7 @@ public class JavaLanguage implements RosettaLanguage {
     // Create & cache the class definition.
     JavaPackage javaPackage = of(clazz.getPackage());
     JavaClass javaClass = new JavaClass(javaPackage, clazz);
+    javaPackage.addClass(javaClass);
     classes.put(qualifiedPath, javaClass);
     return javaClass;
   }
@@ -200,12 +288,12 @@ public class JavaLanguage implements RosettaLanguage {
 
   @Override
   @SuppressWarnings({"unchecked"})
-  public void onLoad(@NotNull Map<String, Object> java) {
+  public void onLoad(@NotNull Map<String, Object> raw) {
 
     // No Java packages? Return.
-    if (!java.containsKey("packages")) return;
+    if (!raw.containsKey("packages")) return;
 
-    final Object oPackages = java.get("packages");
+    final Object oPackages = raw.get("packages");
     if (!(oPackages instanceof Map)) {
       throw new RosettaException("The property \"languages.java.packages\" is not a dictionary.");
     }
@@ -224,10 +312,31 @@ public class JavaLanguage implements RosettaLanguage {
     }
   }
 
+  @NotNull
   @Override
-  public @NotNull Map<String, Object> onSave() {
-    // TODO: Implement.
-    return Map.of();
+  public Map<String, Object> onSave() {
+    final Map<String, Object> raw = new HashMap<>();
+
+    if (hasPackages()) {
+      final Map<String, Object> packages = new HashMap<>();
+
+      // Go through each package alphanumerically.
+      final List<String> keys = new ArrayList<>(this.packages.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+        JavaPackage javaPackage = this.packages.get(key);
+        packages.put(key, javaPackage.onSave());
+      }
+
+      raw.put("packages", packages);
+    }
+
+    return raw;
+  }
+
+  private boolean hasPackages() {
+    return !this.packages.isEmpty();
   }
 
   @NotNull

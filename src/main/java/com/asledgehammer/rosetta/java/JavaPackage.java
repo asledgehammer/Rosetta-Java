@@ -1,9 +1,6 @@
 package com.asledgehammer.rosetta.java;
 
-import com.asledgehammer.rosetta.DirtySupported;
-import com.asledgehammer.rosetta.NamedEntity;
-import com.asledgehammer.rosetta.Notable;
-import com.asledgehammer.rosetta.RosettaObject;
+import com.asledgehammer.rosetta.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,7 +8,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class JavaPackage extends RosettaObject
-    implements DirtySupported, NamedEntity, Notable, Reflected<Package> {
+    implements DirtySupported, NamedEntity, Notable, Reflected<Package>, Taggable {
 
   /** To test Java package names for validity. */
   private static final Pattern REGEX_PKG_NAME =
@@ -36,6 +33,8 @@ public class JavaPackage extends RosettaObject
 
   /** Package-Info documentation notes. */
   private String notes;
+
+  private final List<String> tags = new ArrayList<>();
 
   /**
    * Creation constructor for new package definitions.
@@ -144,9 +143,56 @@ public class JavaPackage extends RosettaObject
   }
 
   @NotNull
-  @Override
   protected Map<String, Object> onSave() {
-    return Map.of();
+    final Map<String, Object> raw = new HashMap<>();
+
+    if (hasNotes()) {
+      raw.put("notes", getNotes());
+    }
+
+    if (hasTags()) {
+      raw.put("tags", getTags());
+    }
+
+    if (hasPackages()) {
+      final Map<String, Object> packages = new HashMap<>();
+
+      // Go through each package alphanumerically.
+      final List<String> keys = new ArrayList<>(this.packages.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+        JavaPackage javaPackage = this.packages.get(key);
+        packages.put(key, javaPackage.onSave());
+      }
+
+      raw.put("packages", packages);
+    }
+
+    if (hasClasses()) {
+      final Map<String, Object> classes = new HashMap<>();
+
+      // Go through each class alphanumerically.
+      final List<String> keys = new ArrayList<>(this.classes.keySet());
+      keys.sort(Comparator.naturalOrder());
+
+      for (String key : keys) {
+        JavaClass javaClass = this.classes.get(key);
+        classes.put(key, javaClass.onSave());
+      }
+
+      raw.put("classes", classes);
+    }
+
+    return raw;
+  }
+
+  private boolean hasClasses() {
+    return !this.classes.isEmpty();
+  }
+
+  private boolean hasPackages() {
+    return !this.packages.isEmpty();
   }
 
   /**
@@ -329,6 +375,60 @@ public class JavaPackage extends RosettaObject
     this.notes = notes;
 
     setDirty();
+  }
+
+  @Override
+  public boolean hasTags() {
+    return !this.tags.isEmpty();
+  }
+
+  @NotNull
+  @Override
+  public List<String> getTags() {
+    return Collections.unmodifiableList(tags);
+  }
+
+  @Override
+  public boolean hasTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    return this.tags.contains(tag);
+  }
+
+  @Override
+  public void addTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is already applied: " + tag);
+    }
+    this.tags.add(tag);
+    setDirty();
+  }
+
+  @Override
+  public void removeTag(@NotNull String tag) {
+    if (tag.isEmpty()) {
+      throw new IllegalArgumentException("The tag is empty.");
+    }
+    if (!tags.contains(tag)) {
+      throw new IllegalArgumentException("The tag is not applied: " + tag);
+    }
+    tags.remove(tag);
+    setDirty();
+  }
+
+  @NotNull
+  @Override
+  public List<String> clearTags() {
+    if (!hasTags()) {
+      throw new RuntimeException("No tags are registered.");
+    }
+    List<String> tagsRemoved = Collections.unmodifiableList(tags);
+    tags.clear();
+    return tagsRemoved;
   }
 
   @NotNull

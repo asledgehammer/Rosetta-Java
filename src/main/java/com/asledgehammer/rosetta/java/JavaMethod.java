@@ -2,6 +2,7 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.Taggable;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.ClassReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +20,10 @@ public class JavaMethod extends JavaExecutable<Method> implements Taggable {
 
     // TODO: Implement discovery.
     this.returns = new JavaReturn(method.getGenericReturnType());
+  }
+
+  JavaMethod(@NotNull String name, @NotNull Map<String, Object> raw) {
+    super(name, raw);
   }
 
   @Override
@@ -41,15 +46,18 @@ public class JavaMethod extends JavaExecutable<Method> implements Taggable {
   }
 
   @NotNull
-  @Override
-  protected Map<String, Object> onSave() {
+  protected Map<String, Object> onSave(@NotNull ClassReference reference) {
 
     // Save the general executable definitions info first.
-    Map<String, Object> raw = super.onSave();
+    Map<String, Object> raw = super.onSave(reference);
 
     // Save the returns definition if qualified.
     if (returns != null && returns.shouldSave()) {
-      raw.put("return", returns.onSave());
+      raw.put("return", returns.onSave(reference, getReflectionTarget().getDeclaringClass()));
+    }
+
+    if (hasTags()) {
+      raw.put("tags", getTags());
     }
 
     return raw;
