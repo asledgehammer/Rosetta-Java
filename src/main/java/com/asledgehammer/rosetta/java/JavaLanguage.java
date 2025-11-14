@@ -5,7 +5,9 @@ import com.asledgehammer.rosetta.exception.MissingKeyException;
 import com.asledgehammer.rosetta.exception.RosettaException;
 import com.asledgehammer.rosetta.exception.TypeException;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.SimpleTypeReference;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
+import com.asledgehammer.rosetta.java.reference.UnionTypeReference;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
@@ -62,6 +64,42 @@ public class JavaLanguage implements RosettaLanguage {
     }
 
     return TypeReference.of(full);
+  }
+
+  /**
+   * @param type The type to serialize.
+   * @return Either a {@link String} for {@link SimpleTypeReference without {@link
+   *     SimpleTypeReference#hasSubTypes()} being true} or a {@link Map}.
+   */
+  @NotNull
+  public static Object serializeType(@NotNull TypeReference type) {
+    Map<String, Object> raw;
+    if (type instanceof SimpleTypeReference simple) {
+      if (!simple.hasSubTypes()) {
+        return simple.compile();
+      }
+      raw = new HashMap<>();
+      raw.put("full", simple.compile());
+      raw.put("base", simple.getBase());
+      List<Object> parameters = new ArrayList<>();
+      for (TypeReference subType : simple.getSubTypes()) {
+        parameters.add(serializeType(subType));
+      }
+      raw.put("parameters", parameters);
+    } else {
+      UnionTypeReference union = (UnionTypeReference) type;
+      raw = new HashMap<>();
+      raw.put("full", union.compile());
+      raw.put("base", union.getBase());
+      raw.put("generic", union.isGeneric());
+      raw.put("bounds_type", union.isExtendsOrSuper() ? "extends" : "super");
+      List<Object> bounds = new ArrayList<>();
+      for (TypeReference bound : union.getBounds()) {
+        bounds.add(serializeType(bound));
+      }
+      raw.put("bounds", bounds);
+    }
+    return raw;
   }
 
   @NotNull
