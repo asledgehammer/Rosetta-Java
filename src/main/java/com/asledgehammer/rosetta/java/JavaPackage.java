@@ -2,6 +2,7 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +11,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class JavaPackage extends RosettaObject
-    implements DirtySupported, NamedEntity, ReflectedReferenceable<Package> {
+    implements DirtySupported, NamedEntity, Notable, Reflected<Package> {
 
   /** To test Java package names for validity. */
   private static final Pattern REGEX_PKG_NAME =
@@ -22,7 +23,7 @@ public class JavaPackage extends RosettaObject
   /** Stores sub-package definitions. */
   private final Map<String, JavaPackage> packages = new HashMap<>();
 
-  private Package reflectedObject;
+  private Package target;
 
   /** The package name. */
   private final String name;
@@ -46,7 +47,7 @@ public class JavaPackage extends RosettaObject
 
     this.language = lang;
     this.parent = parent;
-    this.reflectedObject = pkg;
+    this.target = pkg;
 
     // We already know that this is a valid package-name.
     this.path = pkg.getName();
@@ -79,7 +80,7 @@ public class JavaPackage extends RosettaObject
       this.path = name;
     }
     this.name = name;
-    this.reflectedObject = null;
+    this.target = null;
   }
 
   JavaPackage(
@@ -99,7 +100,7 @@ public class JavaPackage extends RosettaObject
     this.name = name;
 
     // Attempt to resolve reflection before loading.
-    this.reflectedObject = resolve(this.path);
+    this.target = resolve(this.path);
 
     onLoad(raw);
   }
@@ -302,11 +303,21 @@ public class JavaPackage extends RosettaObject
     return this.classes.remove(clazzName);
   }
 
-  @Nullable
+  @Override
+  public boolean hasNotes() {
+    return this.notes != null && !this.notes.isEmpty();
+  }
+
+  @Override
+  @NotNull
   public String getNotes() {
+    if (!hasNotes()) {
+      throw new NullPointerException("The object has no notes.");
+    }
     return this.notes;
   }
 
+  @Override
   public void setNotes(@Nullable String notes) {
     notes = notes == null || notes.isEmpty() ? null : notes;
 
@@ -322,12 +333,12 @@ public class JavaPackage extends RosettaObject
 
   @NotNull
   @Override
-  public Package getReflectedObject() {
-    return reflectedObject;
+  public Package getReflectionTarget() {
+    return target;
   }
 
-  void setReflectedObject(@Nullable Package reflectedObject) {
-    this.reflectedObject = reflectedObject;
+  void setReflectionTarget(@Nullable Package target) {
+    this.target = target;
   }
 
   @Override

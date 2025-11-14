@@ -4,6 +4,9 @@ import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class JavaGenericParameter {
 
   private TypeReference type;
@@ -28,5 +31,14 @@ public class JavaGenericParameter {
 
   public void setNotes(@Nullable String notes) {
     this.notes = notes;
+  }
+
+  @NotNull
+  public Map<String, Object> onSave() {
+    Map<String, Object> raw = new HashMap<>();
+
+    raw.put("type", JavaLanguage.serializeType(type));
+
+    return raw;
   }
 }

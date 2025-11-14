@@ -1,7 +1,9 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.RosettaObject;
+import com.asledgehammer.rosetta.Taggable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,19 +13,17 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class JavaClass extends RosettaObject
-    implements NamedEntity, ReflectedReferenceable<Class<?>> {
+    implements NamedEntity, Notable, Reflected<Class<?>>, Taggable {
 
   private final Map<String, JavaField> fields = new HashMap<>();
   private final Map<String, JavaExecutableCollection<JavaMethod>> methods = new HashMap<>();
-  private final JavaExecutableCollection<JavaConstructor> constructors;
   private final List<JavaGenericParameter> parameters = new ArrayList<>();
-  private Class<?> reflectedObject;
-  private final String name;
-
-  @Nullable private String notes;
   private final List<String> tags = new ArrayList<>();
-
+  private final JavaExecutableCollection<JavaConstructor> constructors;
+  private Class<?> target;
   private final JavaPackage pkg;
+  private String notes;
+  private final String name;
 
   JavaClass(@NotNull JavaPackage pkg, @NotNull Class<?> clazz) {
     super();
@@ -32,7 +32,7 @@ public class JavaClass extends RosettaObject
     this.name = clazz.getSimpleName();
     this.constructors = new JavaExecutableCollection<>(this.name);
 
-    this.reflectedObject = clazz;
+    this.target = clazz;
 
     discover();
   }
@@ -45,13 +45,13 @@ public class JavaClass extends RosettaObject
     this.constructors = new JavaExecutableCollection<>(this.name);
 
     // Attempt to resolve reflection before loading.
-    this.reflectedObject = resolve(pkg.getPath() + "." + name);
+    this.target = resolve(pkg.getPath() + "." + name);
 
     onLoad(raw);
   }
 
   private void discover() {
-    Class<?> clazz = this.reflectedObject;
+    Class<?> clazz = this.target;
 
     // Discover fields.
     for (Field field : clazz.getDeclaredFields()) {
@@ -138,8 +138,9 @@ public class JavaClass extends RosettaObject
     return "JavaClass \"" + getPackage().getPath() + "." + getName() + "\"";
   }
 
+  @NotNull
   @Override
-  public @NotNull String getName() {
+  public String getName() {
     return name;
   }
 
@@ -176,12 +177,12 @@ public class JavaClass extends RosettaObject
 
   @NotNull
   @Override
-  public Class<?> getReflectedObject() {
-    return this.reflectedObject;
+  public Class<?> getReflectionTarget() {
+    return this.target;
   }
 
-  void setReflectedObject(@Nullable Class<?> reflectedObject) {
-    this.reflectedObject = reflectedObject;
+  void setReflectedObject(@Nullable Class<?> target) {
+    this.target = target;
   }
 
   @NotNull
@@ -189,11 +190,21 @@ public class JavaClass extends RosettaObject
     return pkg;
   }
 
-  @Nullable
-  public String getNotes() {
-    return notes;
+  @Override
+  public boolean hasNotes() {
+    return this.notes != null && !this.notes.isEmpty();
   }
 
+  @Override
+  @NotNull
+  public String getNotes() {
+    if (!hasNotes()) {
+      throw new NullPointerException("The object has no notes.");
+    }
+    return this.notes;
+  }
+
+  @Override
   public void setNotes(@Nullable String notes) {
     notes = notes == null || notes.isEmpty() ? null : notes;
 
@@ -207,27 +218,18 @@ public class JavaClass extends RosettaObject
     setDirty();
   }
 
-  /**
-   * @return True if one or more tags are applied.
-   */
+  @Override
   public boolean hasTags() {
     return !this.tags.isEmpty();
   }
 
-  /**
-   * @return A read-only collection of applied tags.
-   */
   @NotNull
+  @Override
   public List<String> getTags() {
     return Collections.unmodifiableList(tags);
   }
 
-  /**
-   * @param tag The tag to evaluate.
-   * @return True if the tag is registered.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty.
-   */
+  @Override
   public boolean hasTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -235,13 +237,7 @@ public class JavaClass extends RosettaObject
     return this.tags.contains(tag);
   }
 
-  /**
-   * Applies a tag to the object.
-   *
-   * @param tag The tag to apply.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty or already applied.
-   */
+  @Override
   public void addTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -253,13 +249,7 @@ public class JavaClass extends RosettaObject
     setDirty();
   }
 
-  /**
-   * Removes a tag from the object.
-   *
-   * @param tag The tag to remove.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty or is not applied.
-   */
+  @Override
   public void removeTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -271,16 +261,15 @@ public class JavaClass extends RosettaObject
     setDirty();
   }
 
-  /**
-   * Clears all applied tags.
-   *
-   * @throws RuntimeException If the object has no tags. (Use {@link JavaField#hasTags()})
-   */
-  public void clearTags() {
-    if (tags.isEmpty()) {
+  @NotNull
+  @Override
+  public List<String> clearTags() {
+    if (!hasTags()) {
       throw new RuntimeException("No tags are registered.");
     }
+    List<String> tagsRemoved = Collections.unmodifiableList(tags);
     tags.clear();
+    return tagsRemoved;
   }
 
   @Nullable

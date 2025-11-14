@@ -1,7 +1,9 @@
 package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.exception.MissingKeyException;
+import com.asledgehammer.rosetta.exception.ValueTypeException;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
@@ -10,13 +12,15 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Field;
 import java.util.*;
 
-public class JavaField extends RosettaObject implements NamedEntity, ReflectedReferenceable<Field> {
+public class JavaField extends RosettaObject
+    implements JavaTyped, NamedEntity, Notable, Reflected<Field> {
 
   private final Field reflectedObject;
   private final String name;
 
   @Nullable private String notes;
   @Nullable private String deprecated;
+  private boolean nullable;
 
   private TypeReference type;
 
@@ -28,6 +32,7 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
     this.name = field.getName();
     this.reflectedObject = field;
     this.type = TypeReference.of(field.getGenericType());
+    this.nullable = !this.type.isPrimitive();
   }
 
   JavaField(@NotNull String name, @NotNull Map<String, Object> raw) {
@@ -45,6 +50,17 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
       throw new MissingKeyException(name, "type");
     }
     this.type = JavaLanguage.resolveType(raw.get("type"));
+
+    // If defined, set the nullable flag.
+    if (raw.containsKey("nullable")) {
+      Object oNullable = raw.get("nullable");
+      if (!(oNullable instanceof Boolean)) {
+        throw new ValueTypeException("parameter", "nullable", oNullable.getClass(), Boolean.class);
+      }
+      this.nullable = (boolean) (Boolean) oNullable;
+    } else {
+      this.nullable = !type.isPrimitive();
+    }
   }
 
   @NotNull
@@ -54,17 +70,19 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
   }
 
   @NotNull
+  @Override
   public TypeReference getType() {
     return this.type;
   }
 
+  @Override
   public void setType(@NotNull TypeReference type) {
     this.type = type;
   }
 
   @Nullable
   @Override
-  public Field getReflectedObject() {
+  public Field getReflectionTarget() {
     return this.reflectedObject;
   }
 
@@ -74,11 +92,21 @@ public class JavaField extends RosettaObject implements NamedEntity, ReflectedRe
     return this.name;
   }
 
-  @Nullable
+  @Override
+  public boolean hasNotes() {
+    return this.notes != null && !this.notes.isEmpty();
+  }
+
+  @Override
+  @NotNull
   public String getNotes() {
+    if (!hasNotes()) {
+      throw new NullPointerException("The object has no notes.");
+    }
     return this.notes;
   }
 
+  @Override
   public void setNotes(@Nullable String notes) {
     notes = notes == null || notes.isEmpty() ? null : notes;
 

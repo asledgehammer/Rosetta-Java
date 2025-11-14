@@ -3,6 +3,7 @@ package com.asledgehammer.rosetta.java.reference;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class SimpleTypeReference extends TypeReference {
 
@@ -112,6 +113,23 @@ public class SimpleTypeReference extends TypeReference {
   @Override
   public TypeReference[] getBounds() {
     return bounds;
+  }
+
+  public boolean hasSubTypes() {
+    return this.subTypes != null && !this.subTypes.isEmpty();
+  }
+
+  /**
+   * @return The subTypes list.
+   * @throws NullPointerException If the subTypes is null. (use {@link
+   *     SimpleTypeReference#hasSubTypes()})
+   */
+  @NotNull
+  public List<TypeReference> getSubTypes() {
+    if (this.subTypes == null) {
+      throw new NullPointerException("The type does not have sub-types.");
+    }
+    return subTypes;
   }
 
   public static List<String> getGenericTypes(String raw) {

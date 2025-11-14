@@ -121,7 +121,7 @@ public class JavaExecutableCollection<E extends JavaExecutable>
     }
 
     for (E e : executables) {
-      if (e.getReflectedObject().equals(executable)) {
+      if (e.getReflectionTarget().equals(executable)) {
         return e;
       }
     }

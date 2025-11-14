@@ -2,14 +2,14 @@ package com.asledgehammer.rosetta.java;
 
 import com.asledgehammer.rosetta.DirtySupported;
 import com.asledgehammer.rosetta.NamedEntity;
+import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.RosettaObject;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
+import com.asledgehammer.rosetta.java.reference.TypeReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * @param <E> The type of {@link Executable} ({@link Method} or {@link Constructor})
  */
 public abstract class JavaExecutable<E extends Executable> extends RosettaObject
-    implements DirtySupported, NamedEntity, ReflectedReferenceable<E> {
+    implements DirtySupported, NamedEntity, Notable, Reflected<E> {
 
   /** Used to validate method names passed from serialized files. */
   private static final Pattern REGEX_EXECUTABLE_NAME =
@@ -27,11 +27,12 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
   private static final List<JavaParameter> DEFAULT_EMPTY_LIST = List.of();
 
   private final List<JavaParameter> parameters = new ArrayList<>();
+  private final List<JavaGenericParameter> typeParameters = new ArrayList<>();
 
   private final String signature;
   protected final String name;
 
-  @Nullable private String notes;
+  private String notes;
 
   /** Defaults to true to compile first-time. */
   private boolean dirty = true;
@@ -42,7 +43,7 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
    */
   private List<JavaParameter> parametersReadOnly = DEFAULT_EMPTY_LIST;
 
-  private final E reflectedObject;
+  private final E target;
 
   @Nullable private String deprecated;
 
@@ -54,14 +55,31 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
    * @param executable The executable reflection object.
    */
   protected JavaExecutable(@NotNull E executable) {
-    this.reflectedObject = executable;
+    super();
+
+    this.target = executable;
     this.name = executable.getName();
     this.signature = createSignature(this);
+
+    // Register any generic parameter variables.
+    TypeVariable<?>[] typeVariables = executable.getTypeParameters();
+    for (TypeVariable<?> typeVariable : typeVariables) {
+      this.typeParameters.add(new JavaGenericParameter(TypeReference.of(typeVariable)));
+    }
+
+    // If parameters are provided, add them.
+    if (executable.getParameterCount() != 0) {
+      for (Parameter parameter : executable.getParameters()) {
+        this.parameters.add(new JavaParameter(parameter));
+      }
+    }
   }
 
   protected JavaExecutable(@NotNull String name, @NotNull Map<String, Object> raw) {
+    super();
+
     this.name = name;
-    this.reflectedObject = null;
+    this.target = null;
     onLoad(raw);
     this.signature = createSignature(this);
   }
@@ -100,6 +118,22 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
     if (raw.containsKey("notes")) {
       this.notes = raw.get("notes").toString();
     }
+  }
+
+  @NotNull
+  @Override
+  protected Map<String, Object> onSave() {
+    Map<String, Object> raw = new HashMap<>();
+
+    // TODO: Implement.
+    if (hasTypeParameters()) {
+      List<Object> typeParameters = new ArrayList<>();
+      for (JavaGenericParameter parameter : this.typeParameters) {
+        typeParameters.add(parameter.onSave());
+      }
+    }
+
+    return raw;
   }
 
   @Override
@@ -154,7 +188,11 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
    * @return True if the executable has no parameter definitions.
    */
   public boolean hasParameters() {
-    return this.parameters.isEmpty();
+    return !this.parameters.isEmpty();
+  }
+
+  public boolean hasTypeParameters() {
+    return !this.typeParameters.isEmpty();
   }
 
   /**
@@ -189,15 +227,25 @@ public abstract class JavaExecutable<E extends Executable> extends RosettaObject
 
   @NotNull
   @Override
-  public E getReflectedObject() {
-    return this.reflectedObject;
+  public E getReflectionTarget() {
+    return this.target;
   }
 
-  @Nullable
+  @Override
+  public boolean hasNotes() {
+    return this.notes != null && !this.notes.isEmpty();
+  }
+
+  @Override
+  @NotNull
   public String getNotes() {
-    return notes;
+    if (!hasNotes()) {
+      throw new NullPointerException("The object has no notes.");
+    }
+    return this.notes;
   }
 
+  @Override
   public void setNotes(@Nullable String notes) {
     notes = notes == null || notes.isEmpty() ? null : notes;
 

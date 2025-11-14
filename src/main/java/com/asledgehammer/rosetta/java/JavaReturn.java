@@ -1,6 +1,8 @@
 package com.asledgehammer.rosetta.java;
 
+import com.asledgehammer.rosetta.Notable;
 import com.asledgehammer.rosetta.exception.MissingKeyException;
+import com.asledgehammer.rosetta.exception.ValueTypeException;
 import com.asledgehammer.rosetta.java.reference.TypeReference;
 import com.asledgehammer.rosetta.RosettaObject;
 import org.jetbrains.annotations.NotNull;
@@ -9,15 +11,18 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Type;
 import java.util.Map;
 
-public class JavaReturn extends RosettaObject {
+public class JavaReturn extends RosettaObject implements Notable {
 
   private TypeReference type;
 
-  @Nullable private String notes;
+  private String notes;
+
+  private boolean nullable;
 
   public JavaReturn(@NotNull Type type) {
     super();
     this.type = TypeReference.of(type);
+    this.nullable = !this.type.isPrimitive();
   }
 
   public JavaReturn(@NotNull Map<String, Object> raw) {
@@ -31,6 +36,17 @@ public class JavaReturn extends RosettaObject {
       throw new MissingKeyException("return[\"type\"]", "type");
     }
     this.type = JavaLanguage.resolveType(raw.get("type"));
+
+    // If defined, set the nullable flag.
+    if (raw.containsKey("nullable")) {
+      Object oNullable = raw.get("nullable");
+      if (!(oNullable instanceof Boolean)) {
+        throw new ValueTypeException("parameter", "nullable", oNullable.getClass(), Boolean.class);
+      }
+      this.nullable = (boolean) (Boolean) oNullable;
+    } else {
+      this.nullable = !type.isPrimitive();
+    }
 
     // Load notes. (If present)
     if (raw.containsKey("notes")) {
@@ -54,11 +70,21 @@ public class JavaReturn extends RosettaObject {
     setDirty();
   }
 
-  @Nullable
-  public String getNotes() {
-    return notes;
+  @Override
+  public boolean hasNotes() {
+    return this.notes != null && !this.notes.isEmpty();
   }
 
+  @Override
+  @NotNull
+  public String getNotes() {
+    if (!hasNotes()) {
+      throw new NullPointerException("The object has no notes.");
+    }
+    return this.notes;
+  }
+
+  @Override
   public void setNotes(@Nullable String notes) {
     notes = notes == null || notes.isEmpty() ? null : notes;
 
@@ -70,5 +96,13 @@ public class JavaReturn extends RosettaObject {
     this.notes = notes;
 
     setDirty();
+  }
+
+  /**
+   * @return True if the returns definition should save, having either a non-void return or defined
+   *     notes.
+   */
+  boolean shouldSave() {
+    return !this.type.getBase().equals("void") || this.notes != null;
   }
 }

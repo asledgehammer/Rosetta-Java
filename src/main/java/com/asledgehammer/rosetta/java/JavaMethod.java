@@ -1,5 +1,6 @@
 package com.asledgehammer.rosetta.java;
 
+import com.asledgehammer.rosetta.Taggable;
 import com.asledgehammer.rosetta.exception.ValueTypeException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -7,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Method;
 import java.util.*;
 
-public class JavaMethod extends JavaExecutable<Method> {
+public class JavaMethod extends JavaExecutable<Method> implements Taggable {
 
   @Nullable private JavaReturn returns;
 
@@ -17,6 +18,7 @@ public class JavaMethod extends JavaExecutable<Method> {
     super(method);
 
     // TODO: Implement discovery.
+    this.returns = new JavaReturn(method.getGenericReturnType());
   }
 
   @Override
@@ -32,12 +34,25 @@ public class JavaMethod extends JavaExecutable<Method> {
         throw new ValueTypeException(name, "return", oReturns.getClass(), Map.class);
       }
       this.returns = new JavaReturn((Map<String, Object>) oReturns);
+    } else {
+      // Null definitions are void.
+      this.returns = new JavaReturn(void.class);
     }
   }
 
+  @NotNull
   @Override
-  protected @NotNull Map<String, Object> onSave() {
-    return Map.of();
+  protected Map<String, Object> onSave() {
+
+    // Save the general executable definitions info first.
+    Map<String, Object> raw = super.onSave();
+
+    // Save the returns definition if qualified.
+    if (returns != null && returns.shouldSave()) {
+      raw.put("return", returns.onSave());
+    }
+
+    return raw;
   }
 
   @Override
@@ -79,27 +94,18 @@ public class JavaMethod extends JavaExecutable<Method> {
     return "JavaMethod \"" + getSignature() + "\"";
   }
 
-  /**
-   * @return True if one or more tags are applied.
-   */
+  @Override
   public boolean hasTags() {
     return !this.tags.isEmpty();
   }
 
-  /**
-   * @return A read-only collection of applied tags.
-   */
   @NotNull
+  @Override
   public List<String> getTags() {
     return Collections.unmodifiableList(tags);
   }
 
-  /**
-   * @param tag The tag to evaluate.
-   * @return True if the tag is registered.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty.
-   */
+  @Override
   public boolean hasTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -107,13 +113,7 @@ public class JavaMethod extends JavaExecutable<Method> {
     return this.tags.contains(tag);
   }
 
-  /**
-   * Applies a tag to the object.
-   *
-   * @param tag The tag to apply.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty or already applied.
-   */
+  @Override
   public void addTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -125,13 +125,7 @@ public class JavaMethod extends JavaExecutable<Method> {
     setDirty();
   }
 
-  /**
-   * Removes a tag from the object.
-   *
-   * @param tag The tag to remove.
-   * @throws NullPointerException If the tag is null.
-   * @throws IllegalArgumentException If the tag is empty or is not applied.
-   */
+  @Override
   public void removeTag(@NotNull String tag) {
     if (tag.isEmpty()) {
       throw new IllegalArgumentException("The tag is empty.");
@@ -143,15 +137,14 @@ public class JavaMethod extends JavaExecutable<Method> {
     setDirty();
   }
 
-  /**
-   * Clears all applied tags.
-   *
-   * @throws RuntimeException If the object has no tags. (Use {@link JavaField#hasTags()})
-   */
-  public void clearTags() {
-    if (tags.isEmpty()) {
+  @NotNull
+  @Override
+  public List<String> clearTags() {
+    if (!hasTags()) {
       throw new RuntimeException("No tags are registered.");
     }
+    List<String> tagsRemoved = Collections.unmodifiableList(tags);
     tags.clear();
+    return tagsRemoved;
   }
 }
